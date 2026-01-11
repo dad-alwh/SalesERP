@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SalesERP  - إدارة الصلاحيات النهائية</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap');
+        body { font-family: 'Cairo', sans-serif; overflow-x: hidden; }
+        [x-cloak] { display: none !important; }
+        
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            padding: 0.9rem 1.25rem;
+            border-radius: 0.75rem;
+            color: #94a3b8;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+        .sidebar-link i { width: 28px; text-align: center; font-size: 1.1rem; }
+        .sidebar-link:hover { background-color: rgba(59, 130, 246, 0.1); color: #60a5fa; }
+        .sidebar-link.active {
+            background: #2563eb;
+            color: white;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.25);
+        }
+
+        .perm-toggle {
+            appearance: none;
+            width: 1.6rem;
+            height: 1.6rem;
+            border-radius: 0.5rem;
+            border: 2px solid #cbd5e1;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: white;
+        }
+        .perm-toggle:hover:not(:disabled) { border-color: #3b82f6; transform: scale(1.05); }
+        .perm-toggle:checked {
+            background-color: #10b981;
+            border-color: #10b981;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+        }
+        .perm-toggle:checked::after {
+            content: "\f00c";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            font-size: 0.85rem;
+            color: white;
+        }
+        .perm-toggle:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            background-color: #f1f5f9;
+        }
+        .table-container {
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e1 transparent;
+        }
+    </style>
+</head>
+
+<body x-data="permissionManager()" x-init="init()" class="bg-[#f8fafc] text-slate-900" x-cloak>
+
+    <aside class="bg-[#0f172a] text-white w-64 h-screen fixed right-0 top-0 shadow-2xl z-50 flex flex-col border-l border-slate-800">
+        <div class="p-6 border-b border-slate-800 flex items-center gap-3">
+            <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
+                <i class="fas fa-shield-halved text-lg"></i>
+            </div>
+            <h1 class="text-xl font-black tracking-tight">Sales<span class="text-blue-500 italic">ERP</span></h1>
+        </div>
+
+        <nav class="p-4 flex-grow overflow-y-auto">
+            <a href="dashboard.html" class="sidebar-link"><i class="fas fa-chart-line ml-3"></i><span>لوحة التحكم</span></a>
+            <a href="products.html" class="sidebar-link"><i class="fas fa-boxes-stacked ml-3"></i><span>المنتجات</span></a>
+            <a href="customers.html" class="sidebar-link"><i class="fas fa-users-viewfinder ml-3"></i><span>العملاء</span></a>
+            <a href="invoices.html" class="sidebar-link"><i class="fas fa-file-invoice-dollar ml-3"></i><span>فاتورة المبيعات</span></a>
+            <a href="roles.html" class="sidebar-link"><i class="fas fa-id-badge ml-3"></i><span>الأدوار</span></a>
+            <a href="users.html" class="sidebar-link"><i class="fas fa-user-gear ml-3"></i><span>المستخدمين</span></a>
+            <a href="permissions.html" class="sidebar-link active"><i class="fas fa-key ml-3"></i><span>الصلاحيات</span></a>
+        </nav>
+
+        
+        <div class="p-4 bg-slate-900/50 border-t border-slate-800">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold" x-text="currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'"></div>
+                    <div class="text-right overflow-hidden">
+                        <p class="text-xs font-bold text-white truncate w-24" x-text="currentUser.name"></p>
+                        <p class="text-[10px] text-blue-400 font-medium uppercase" x-text="currentUser.role_name"></p>
+                    </div>
+                </div>
+                <button @click="handleLogout" class="hover:text-red-400 transition-colors"><i class="fas fa-power-off text-sm"></i></button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main  -->
+    <main class="mr-64 p-8">
+        
+        <header class="flex justify-between items-start mb-10">
+            <div class="text-right">
+                <h2 class="text-4xl font-black text-slate-800 tracking-tight"> الصلاحيات</h2>
+                <div class="flex items-center gap-2 mt-2">
+                    <span class="h-1 w-12 bg-blue-600 rounded-full"></span>
+                    <p class="text-slate-500 text-sm font-semibold uppercase tracking-widest">إدارة الأذونات المتقدمة للموديلات</p>
+                </div>
+            </div>
+            
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-6">
+                <div class="text-center border-l border-slate-100 pl-6">
+                    <p class="text-[10px] font-black text-slate-400 mb-1 uppercase">الأدوار المتاحة</p>
+                    <p class="text-2xl font-black text-slate-800" x-text="roles.length"></p>
+                </div>
+                <div class="text-center">
+                    <p class="text-[10px] font-black text-slate-400 mb-1 uppercase">إجمالي القواعد</p>
+                    <p class="text-2xl font-black text-blue-600" x-text="permissions.length"></p>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div class="relative group">
+                <i class="fas fa-filter absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors"></i>
+                <select x-model="selectedRole" class="w-full bg-white border border-slate-200 rounded-2xl pr-12 pl-4 py-4 text-sm font-bold shadow-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all appearance-none">
+                    <option value="">جميع الأدوار الوظيفية</option>
+                    <template x-for="role in roles" :key="role.id">
+                        <option :value="role.id" x-text="role.name"></option>
+                    </template>
+                </select>
+                <i class="fas fa-chevron-down absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none"></i>
+            </div>
+
+            <div class="relative group md:col-span-2">
+                <i class="fas fa-search absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors"></i>
+                <input type="text" x-model="searchQuery" placeholder="بحث باسم الموديل (مثل: Products, Users...)" class="w-full bg-white border border-slate-200 rounded-2xl pr-12 pl-4 py-4 text-sm font-bold shadow-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all">
+            </div>
+        </div>
+
+        <div class="bg-white rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden relative">
+        
+            <div x-show="loading.permissions" class="absolute inset-0 bg-white/80 backdrop-blur-md z-30 flex flex-col items-center justify-center">
+                <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p class="font-black text-slate-600 animate-pulse">جاري جلب الصلاحيات...</p>
+            </div>
+
+            <div class="overflow-x-auto table-container">
+                <table class="w-full text-right border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50/80 border-b border-slate-100">
+                            <th class="px-8 py-6 text-[11px] font-black text-slate-400 uppercase tracking-tighter">الدور الوظيفي</th>
+                            <th class="px-8 py-6 text-[11px] font-black text-slate-400 uppercase tracking-tighter">الموديل</th>
+                            <th class="px-4 py-6 text-center text-[11px] font-black text-slate-400 uppercase tracking-tighter">إنشاء (C)</th>
+                            <th class="px-4 py-6 text-center text-[11px] font-black text-slate-400 uppercase tracking-tighter">قراءة (R)</th>
+                            <th class="px-4 py-6 text-center text-[11px] font-black text-slate-400 uppercase tracking-tighter">تعديل (U)</th>
+                            <th class="px-4 py-6 text-center text-[11px] font-black text-slate-400 uppercase tracking-tighter">حذف (D)</th>
+                            <th class="px-8 py-6 text-center text-[11px] font-black text-slate-400 uppercase tracking-tighter">الإجراء</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">
+                        <template x-for="perm in filteredPermissions" :key="perm.id">
+                            <tr class="hover:bg-blue-50/30 transition-colors group">
+                                <td class="px-8 py-5">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-2 h-2 rounded-full bg-blue-400"></div>
+                                        <span class="font-bold text-slate-700" x-text="getRoleName(perm.role_id)"></span>
+                                    </div>
+                                </td>
+                                <td class="px-8 py-5">
+                                    <span class="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-black" x-text="perm.model_name"></span>
+                                </td>
+                                <td class="px-4 py-5 text-center">
+                                    <input type="checkbox" x-model="perm.create" :disabled="perm.isSaving || !canUpdate" @change="markAsChanged(perm)" class="perm-toggle">
+                                </td>
+                                <td class="px-4 py-5 text-center">
+                                    <input type="checkbox" x-model="perm.read" :disabled="perm.isSaving || !canUpdate" @change="markAsChanged(perm)" class="perm-toggle">
+                                </td>
+                                <td class="px-4 py-5 text-center">
+                                    <input type="checkbox" x-model="perm.update" :disabled="perm.isSaving || !canUpdate" @change="markAsChanged(perm)" class="perm-toggle">
+                                </td>
+                                <td class="px-4 py-5 text-center">
+                                    <input type="checkbox" x-model="perm.delete" :disabled="perm.isSaving || !canUpdate" @change="markAsChanged(perm)" class="perm-toggle">
+                                </td>
+                                <td class="px-8 py-5 text-center">
+                                    <div class="flex justify-center">
+                                        <button 
+                                            x-show="perm.isChanged" 
+                                            @click="updatePermission(perm)" 
+                                            :disabled="perm.isSaving"
+                                            class="flex items-center gap-2 bg-blue-600 text-white px-5 py-2 rounded-xl text-xs font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all active:scale-95 disabled:opacity-50"
+                                        >
+                                            <i x-show="!perm.isSaving" class="fas fa-cloud-upload-alt"></i>
+                                            <i x-show="perm.isSaving" class="fas fa-spinner animate-spin"></i>
+                                            <span x-text="perm.isSaving ? 'جاري...' : 'حفظ التغيير'"></span>
+                                        </button>
+                                        <span x-show="!perm.isChanged" class="text-slate-300 text-[10px] font-bold italic">لا توجد تعديلات</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+                
+                
+                <template x-if="filteredPermissions.length === 0 && !loading.permissions">
+                    <div class="py-20 text-center">
+                        <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-dashed border-slate-200">
+                            <i class="fas fa-search text-slate-300 text-2xl"></i>
+                        </div>
+                        <h3 class="text-lg font-black text-slate-700">لم يتم العثور على نتائج</h3>
+                        <p class="text-slate-400 text-sm mt-1">تاكد من كتابة models</p>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </main>
+    <div x-show="message.show" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 translate-y-10"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100 translate-y-0"
+         x-transition:leave-end="opacity-0 translate-y-10"
+         class="fixed bottom-8 left-8 z-[100]"
+    >
+        <div :class="message.type === 'success' ? 'bg-emerald-500 shadow-emerald-200' : 'bg-rose-500 shadow-rose-200'" 
+             class="text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 min-w-[320px]"
+        >
+            <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                <i class="fas" :class="message.type === 'success' ? 'fa-check' : 'fa-exclamation-triangle'"></i>
+            </div>
+            <div>
+                <p class="font-black text-sm" x-text="message.type === 'success' ? 'تمت العملية بنجاح' : 'تنبيه خطأ'"></p>
+                <p class="text-[11px] opacity-90 font-bold" x-text="message.text"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function permissionManager() {
+            return {
+                currentUser: { name: '', role_name: '' },
+                roles: [],
+                permissions: [],
+                loading: { permissions: false, roles: false },
+                searchQuery: '',
+                selectedRole: '',
+                message: { show: false, text: '', type: 'info' },
+                canUpdate: false,
+
+                async init() {
+                
+                    if (window.auth) {
+                        if (!auth.isAuthenticated()) {
+                            window.location.href = 'index.html';
+                            return;
+                        }
+                        this.currentUser = auth.getUser();
+                        this.canUpdate = auth.can('Permissions', 'update');
+                    } else {
+                        
+                        this.canUpdate = true;
+                    }
+                    await this.loadRoles();
+                    await this.loadPermissions();
+                },
+
+                showNotification(text, type = 'success') {
+                    this.message = { show: true, text, type };
+                    setTimeout(() => this.message.show = false, 4000);
+                },
+
+                getRoleName(id) {
+                    const role = this.roles.find(r => r.id == id);
+                    return role ? role.name : `دور #${id}`;
+                },
+
+                markAsChanged(perm) {
+                    perm.isChanged = true;
+                },
+
+                async loadRoles() {
+                    this.loading.roles = true;
+                    try {
+                        const data = await apiFetch('/roles/');
+                        this.roles = Array.isArray(data) ? data : [];
+                    } catch (e) {
+                        console.error('Load Roles Failed', e);
+                    } finally { this.loading.roles = false; }
+                },
+
+                async loadPermissions() {
+                    this.loading.permissions = true;
+                    try {
+                        const data = await apiFetch('/permissions/');
+                        this.permissions = Array.isArray(data) ? data.map(p => ({
+                            ...p,
+                            isChanged: false,
+                            isSaving: false
+                        })) : [];
+                    } catch (e) {
+                        this.showNotification('فشل في تحميل  الصلاحيات من الخادم', 'error');
+                    } finally { this.loading.permissions = false; }
+                },
+
+                get filteredPermissions() {
+                    return this.permissions.filter(p => {
+                        const matchesRole = !this.selectedRole || p.role_id == this.selectedRole;
+                        const matchesSearch = !this.searchQuery || p.model_name.toLowerCase().includes(this.searchQuery.toLowerCase());
+                        return matchesRole && matchesSearch;
+                    });
+                },
+
+                async updatePermission(perm) {
+                    if (!this.canUpdate) {
+                        return this.showNotification(' عذراً، ليس لديك صلاحية تعديل هذه الصلاحية', 'error');
+                    }
+
+                    perm.isSaving = true;
+                    try {
+                        const payload = {
+                            role_id: perm.role_id,
+                            model_name: perm.model_name,
+                            create: perm.create ? 1 : 0,
+                            read: perm.read ? 1 : 0,
+                            update: perm.update ? 1 : 0,
+                            delete: perm.delete ? 1 : 0
+                        };
+                        await apiFetch(`/permissions/${perm.id}/`, 'PUT', payload);
+                        
+                    
+                        perm.isChanged = false;
+                        this.showNotification(`تم تحديث صلاحيات [${perm.model_name}] بنجاح`, 'success');
+                        
+                    
+                        if (window.auth && perm.role_id == this.currentUser.role_id) {
+                        
+                            console.log("Current user's own permissions were updated.");
+                        }
+
+                    } catch (e) {
+                        console.error('Update Failed', e);
+                        this.showNotification('حدث خطأ أثناء محاولة حفظ التعديلات', 'error');
+                    } finally {
+                        perm.isSaving = false;
+                    }
+                },
+
+                handleLogout() {
+                    if (window.auth) auth.logout();
+                }
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SalesERP  - إدارة الأدوار</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap');
+        body { font-family: 'Cairo', sans-serif; }
+        [x-cloak] { display: none !important; }
+        
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            padding: 0.9rem 1.25rem;
+            border-radius: 0.75rem;
+            color: #94a3b8;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+        .sidebar-link i { width: 28px; text-align: center; font-size: 1.1rem; }
+        .sidebar-link:hover { background-color: rgba(59, 130, 246, 0.1); color: #60a5fa; }
+        .sidebar-link.active {
+            background: #2563eb;
+            color: white;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.25);
+        }
+
+        .btn-tool {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1.25rem;
+            border-radius: 0.75rem;
+            font-size: 0.85rem;
+            font-weight: 700;
+            transition: all 0.2s;
+        }
+
+        .perm-checkbox {
+            appearance: none;
+            width: 1.25rem;
+            height: 1.25rem;
+            border-radius: 0.25rem;
+            border: 2px solid #cbd5e1;
+            transition: all 0.2s;
+            cursor: pointer;
+            display: inline-block;
+        }
+        .perm-checkbox:checked {
+            background-color: #2563eb;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px #bfdbfe;
+        }
+        .perm-checkbox:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .perm-checkbox:checked::before {
+            content: "\f00c"; 
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            font-size: 0.75rem;
+            color: white;
+            display: block;
+            text-align: center;
+            line-height: 1.25rem;
+        }
+    </style>
+</head>
+
+<body x-data="roleManager()" x-init="init()" class="bg-slate-50 text-slate-900" x-cloak>
+
+    <aside class="bg-[#0f172a] text-white w-64 h-screen fixed right-0 top-0 shadow-2xl z-50 flex flex-col border-l border-slate-800">
+        <div class="p-6 border-b border-slate-800 flex items-center gap-3">
+            <div class="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-900/20">
+                <i class="fas fa-layer-group text-sm"></i>
+            </div>
+            <h1 class="text-xl font-black tracking-tight">Sales<span class="text-blue-500 italic">ERP</span></h1>
+        </div>
+
+        <nav class="p-4 flex-grow overflow-y-auto">
+    
+            <a href="dashboard.html" class="sidebar-link">
+                <i class="fas fa-chart-line ml-3"></i>
+                <span>لوحة التحكم</span>
+            </a>
+            <a href="products.html" class="sidebar-link">
+                <i class="fas fa-boxes-stacked ml-3"></i>
+                <span>المنتجات</span>
+            </a>
+
+            <a href="customers.html" class="sidebar-link">
+                <i class="fas fa-users-viewfinder ml-3"></i>
+                <span>العملاء</span>
+            </a>
+
+            <a href="invoices.html" class="sidebar-link">
+                <i class="fas fa-file-invoice-dollar ml-3"></i>
+                <span>فاتورة المبيعات</span>
+            </a>
+          
+            <a href="roles.html" class="sidebar-link active">
+                <i class="fas fa-shield-halved ml-3"></i>
+                <span>الادوار</span>
+            </a>
+
+            <a href="users.html" class="sidebar-link">
+                <i class="fas fa-user-group ml-3"></i>
+                <span>المستخدمين</span>
+            </a>
+
+           
+            <a href="permissions.html" class="sidebar-link">
+                <i class="fas fa-key ml-3"></i>
+                <span>الصلاحيات</span>
+            </a>
+
+        </nav>
+
+        <div class="p-4 bg-slate-900/50 border-t border-slate-800">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-blue-600/20 border border-blue-600/30 flex items-center justify-center text-blue-400 font-bold text-xs" x-text="currentUser.name ? currentUser.name.charAt(0).toUpperCase() : ''"></div>
+                    <div class="text-right">
+                        <p class="text-[11px] font-bold text-white truncate w-24" x-text="currentUser.name"></p>
+                        <p class="text-[9px] text-slate-500 font-medium uppercase" x-text="currentUser.role_name"></p>
+                    </div>
+                </div>
+                <button @click="handleLogout" class="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-red-400 transition-colors">
+                    <i class="fas fa-power-off text-sm"></i>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main  -->
+    <main class="mr-64 p-8 min-h-screen">
+        <header class="flex justify-between items-end mb-8">
+            <div>
+                <h2 class="text-3xl font-black text-slate-800">إدارة الأدوار والصلاحيات</h2>
+                <p class="text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest text-right">إنشاء وتعديل وتعيين صلاحيات الأدوار</p>
+            </div>
+            
+            <div class="flex gap-4">
+                <div class="bg-white px-6 py-3 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 text-right">
+                    <div>
+                        <p class="text-[10px] font-black text-slate-400">إجمالي الأدوار</p>
+                        <p class="text-xl font-black text-blue-600" x-text="roles.length"></p>
+                    </div>
+                    <i class="fas fa-shield-halved text-slate-100 text-3xl"></i>
+                </div>
+            </div>
+        </header>
+
+        <!-- Toolbar -->
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-6 flex flex-wrap items-center gap-3">
+           
+            <button 
+                @click="openAddModal()" 
+                :disabled="!can('Roles', 'create')" 
+                class="btn-tool bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200 disabled:opacity-30 disabled:cursor-not-allowed">
+                <i class="fas fa-plus-circle"></i>
+                <span>دور جديد</span>
+            </button>
+            
+            <button 
+                @click="openEditModal()" 
+                :disabled="!selectedId || !can('Roles', 'update')" 
+                class="btn-tool bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed">
+                <i class="fas fa-edit text-amber-500"></i>
+                <span>تعديل الدور</span>
+            </button>
+
+            
+            <button 
+                @click="confirmDelete()" 
+                :disabled="!selectedId || !can('Roles', 'delete')" 
+                class="btn-tool bg-white border border-slate-200 text-slate-700 hover:bg-red-50 hover:text-red-600 disabled:opacity-30 disabled:cursor-not-allowed">
+                <i class="fas fa-trash-alt text-red-400"></i>
+                <span>حذف</span>
+            </button>
+            
+            <div class="mr-auto relative">
+                <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                <input type="text" x-model="searchQuery" placeholder="بحث باسم الدور..." class="bg-slate-50 border border-slate-200 rounded-xl pr-10 pl-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none w-64">
+            </div>
+        </div>
+
+        
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden relative">
+            <div x-show="loading.roles" class="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex items-center justify-center font-bold text-blue-600">
+                <i class="fas fa-spinner animate-spin ml-2"></i> جاري مزامنة بيانات الأدوار...
+            </div>
+
+            <table class="w-full text-right">
+                <thead>
+                    <tr class="bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-widest border-b border-slate-100">
+                        <th class="px-6 py-5 w-16 text-center">#</th>
+                        <th class="px-6 py-5 text-right">اسم الدور</th>
+                        <th class="px-6 py-5">الدور الأب (Parent)</th>
+                        <th class="px-6 py-5">الحالة</th>
+                        <th class="px-6 py-5">تاريخ الإنشاء</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                    <template x-for="role in filteredRoles" :key="role.id">
+                        <tr @click="selectedId = role.id" 
+                            :class="selectedId === role.id ? 'bg-blue-50/50' : 'hover:bg-slate-50/40'" 
+                            class="cursor-pointer transition-all group">
+                            <td class="px-6 py-5 text-center">
+                                <div class="w-5 h-5 border rounded flex items-center justify-center mx-auto transition-all" :class="selectedId === role.id ? 'bg-blue-600 border-blue-600' : 'bg-white border-slate-300'">
+                                    <i x-show="selectedId === role.id" class="fas fa-check text-[8px] text-white"></i>
+                                </div>
+                            </td>
+                            <td class="px-6 py-5 font-black text-slate-800" x-text="role.name"></td>
+                            <td class="px-6 py-5">
+                                <p class="font-bold text-slate-700" x-text="getParentRoleName(role.parent_role_id)"></p>
+                            </td>
+                            <td class="px-6 py-5">
+                                <span class="px-3 py-1 text-xs font-bold rounded-full" 
+                                      :class="{'bg-green-100 text-green-700': role.status === 'active', 'bg-red-100 text-red-700': role.status === 'inactive'}"
+                                      x-text="translateStatus(role.status)"></span>
+                            </td>
+                            <td class="px-6 py-5 text-slate-400 text-sm">
+                                <span x-text="formatDate(role.created_at)"></span>
+                            </td>
+                        </tr>
+                    </template>
+                
+                    <template x-if="filteredRoles.length === 0 && !loading.roles">
+                        <tr>
+                            <td colspan="5" class="p-16 text-center text-slate-400">
+                                <i class="fas fa-magnifying-glass-shield text-3xl mb-3"></i>
+                                <p class="font-bold">لا توجد أدوار مطابقة لنتيجة البحث.</p>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+        
+        <div x-show="selectedId && can('Permissions', 'read')" class="mt-8 bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
+            <h4 class="text-xl font-black text-blue-800 mb-4 flex items-center gap-2">
+                <i class="fas fa-key text-blue-500"></i>
+                صلاحيات الدور: <span class="text-slate-800" x-text="getSelectedRoleName()"></span>
+            </h4>
+            <div x-show="loading.permissions" class="text-center py-4 text-sm text-slate-500">
+                <i class="fas fa-spinner animate-spin ml-2"></i> جاري جلب الصلاحيات...
+            </div>
+            
+            <table x-show="!loading.permissions && selectedPermissions.length > 0" class="w-full text-right text-sm">
+                <thead>
+                    <tr class="text-[10px] font-black uppercase text-slate-400 border-b border-slate-100 bg-slate-50">
+                        <th class="py-3 px-4">الموديل (Model)</th>
+                        <th class="py-3 px-4 text-center">إنشاء (Create)</th>
+                        <th class="py-3 px-4 text-center">قراءة (Read)</th>
+                        <th class="py-3 px-4 text-center">تعديل (Update)</th>
+                        <th class="py-3 px-4 text-center">حذف (Delete)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="perm in selectedPermissions" :key="perm.id">
+                        <tr class="border-b border-slate-50 hover:bg-slate-50/40 transition-colors">
+                            <td class="py-3 px-4 font-medium text-slate-700" x-text="perm.model_name"></td>
+                            <td class="py-3 px-4 text-center text-lg" :class="perm.create ? 'text-green-600' : 'text-red-400'">
+                                <i :class="perm.create ? 'fas fa-circle-check' : 'fas fa-circle-xmark'"></i>
+                            </td>
+                            <td class="py-3 px-4 text-center text-lg" :class="perm.read ? 'text-green-600' : 'text-red-400'">
+                                <i :class="perm.read ? 'fas fa-circle-check' : 'fas fa-circle-xmark'"></i>
+                            </td>
+                            <td class="py-3 px-4 text-center text-lg" :class="perm.update ? 'text-green-600' : 'text-red-400'">
+                                <i :class="perm.update ? 'fas fa-circle-check' : 'fas fa-circle-xmark'"></i>
+                            </td>
+                            <td class="py-3 px-4 text-center text-lg" :class="perm.delete ? 'text-green-600' : 'text-red-400'">
+                                <i :class="perm.delete ? 'fas fa-circle-check' : 'fas fa-circle-xmark'"></i>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+            <div x-show="!loading.permissions && selectedPermissions.length === 0" class="text-center py-4 text-sm text-slate-500">
+                <p>لا توجد صلاحيات معرفة لهذا الدور بعد.</p>
+            </div>
+        </div>
+
+    </main>
+
+    
+    <div x-show="modalOpen" x-cloak class="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div @click="modalOpen = false" class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
+        <div class="bg-white w-full max-w-4xl rounded-[2.5rem] shadow-2xl relative z-10 border border-slate-200 overflow-hidden" x-transition>
+            <div class="p-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+                <div>
+                    <h3 class="font-black text-xl text-slate-800" x-text="isEdit ? 'تعديل الدور: ' + form.name : 'إنشاء دور جديد'"></h3>
+                    <p class="text-[10px] text-slate-400 font-bold uppercase mt-1">تفاصيل الدور وتعيين الصلاحيات</p>
+                </div>
+                <button @click="modalOpen = false" class="text-slate-400 hover:text-slate-600 transition-colors"><i class="fas fa-times-circle text-2xl"></i></button>
+            </div>
+            
+            <form @submit.prevent="saveRole" class="p-8 space-y-6 overflow-y-auto max-h-[85vh]">
+                
+                <!-- Section 1: Role Details -->
+                <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200 grid grid-cols-3 gap-6">
+                    <div class="col-span-2">
+                        <label class="block text-[10px] font-black text-slate-500 uppercase mb-2 mr-1">اسم الدور *</label>
+                        <input type="text" x-model.trim="form.name" required class="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:border-blue-500 outline-none font-bold text-sm transition-all" placeholder=" مدير مبيعات، كاشير، إلخ">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase mb-2 mr-1">الحالة *</label>
+                        <select x-model="form.status" required class="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:border-blue-500 outline-none font-bold text-sm transition-all">
+                            <option value="active">مفعل</option>
+                            <option value="inactive">غير مفعل</option>
+                        </select>
+                    </div>
+                   
+                    <div x-show="isEdit" class="col-span-3">
+                        <label class="block text-[10px] font-black text-slate-500 uppercase mb-2 mr-1">الدور الأب (Parent Role)</label>
+                        <div class="w-full px-5 py-3.5 bg-slate-200 border border-slate-300 rounded-2xl text-sm font-medium text-slate-700">
+                            <span x-text="getParentRoleName(form.parent_role_id)"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Permissions Configuration -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h4 class="text-sm font-black text-slate-800 mb-4">تحديد الصلاحيات (Permissions)</h4>
+                    
+                    <table class="w-full text-right text-sm">
+                        <thead>
+                            <tr class="text-[10px] font-black uppercase text-slate-400 border-b border-slate-100">
+                                <th class="py-3 px-4 w-1/4">الموديل (Model)</th>
+                                <th class="py-3 px-4 text-center">إنشاء (Create)</th>
+                                <th class="py-3 px-4 text-center">قراءة (Read)</th>
+                                <th class="py-3 px-4 text-center">تعديل (Update)</th>
+                                <th class="py-3 px-4 text-center">حذف (Delete)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="(perm, index) in form.permissions" :key="index">
+                                <tr class="border-b border-slate-50">
+                                    <td class="py-3 px-4 font-medium text-slate-700" x-text="perm.model_name"></td>
+                                    <td class="py-3 px-4 text-center">
+                                        <input type="checkbox" x-model="perm.create" class="perm-checkbox">
+                                    </td>
+                                    <td class="py-3 px-4 text-center">
+                                        <input type="checkbox" x-model="perm.read" class="perm-checkbox">
+                                    </td>
+                                    <td class="py-3 px-4 text-center">
+                                        <input type="checkbox" x-model="perm.update" class="perm-checkbox">
+                                    </td>
+                                    <td class="py-3 px-4 text-center">
+                                        <input type="checkbox" x-model="perm.delete" class="perm-checkbox">
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="submit" class="flex-1 bg-slate-900 text-white py-4 rounded-2xl font-black text-sm shadow-xl shadow-slate-200 hover:bg-black transition-all" :disabled="!isFormValid() || loading.saving">
+                        <i x-show="loading.saving" class="fas fa-spinner animate-spin ml-2"></i>
+                        <span>حفظ الدور والصلاحيات</span>
+                    </button>
+                    <button type="button" @click="modalOpen = false" class="px-8 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold text-sm">إلغاء</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div x-show="confirmation.show" x-cloak class="fixed inset-0 z-[110] flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm"></div>
+        <div class="bg-white w-full max-w-sm rounded-xl shadow-2xl relative z-10 p-6 text-center" x-transition>
+            <i class="fas fa-triangle-exclamation text-4xl text-amber-500 mb-4"></i>
+            <p class="font-bold text-slate-800 mb-6" x-text="confirmation.text"></p>
+            <div class="flex justify-center gap-3">
+                <button @click="confirmation.action(); confirmation.show = false;" class="px-6 py-3 bg-red-600 text-white rounded-lg font-bold text-sm hover:bg-red-700 transition-colors">تأكيد الإجراء</button>
+                <button @click="confirmation.show = false" class="px-6 py-3 bg-slate-100 text-slate-600 rounded-lg font-bold text-sm hover:bg-slate-200 transition-colors">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+  
+    <div x-show="message.show" x-cloak x-transition.duration.300ms class="fixed bottom-6 right-6 z-[120]">
+        <div :class="{
+            'bg-green-600': message.type === 'success',
+            'bg-red-600': message.type === 'error',
+            'bg-blue-600': message.type === 'info',
+        }" class="text-white p-4 rounded-xl shadow-lg flex items-center gap-3 w-80">
+            <i class="text-xl" :class="{
+                'fas fa-check-circle': message.type === 'success',
+                'fas fa-circle-xmark': message.type === 'error',
+                'fas fa-info-circle': message.type === 'info',
+            }"></i>
+            <span class="font-medium text-sm" x-text="message.text"></span>
+        </div>
+    </div>
+
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script src="assets/js/roles.js"></script>
+
+  
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
+   
+</body>
+</html>

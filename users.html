@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SalesERP - إدارة المستخدمين</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap');
+        body { font-family: 'Cairo', sans-serif; }
+        [x-cloak] { display: none !important; }
+        
+        .sidebar-link {
+            display: flex; align-items: center; padding: 0.9rem 1.25rem;
+            border-radius: 0.75rem; color: #94a3b8; transition: all 0.2s ease;
+            text-decoration: none; margin-bottom: 0.5rem; font-size: 0.95rem; font-weight: 600;
+        }
+        .sidebar-link i { width: 28px; text-align: center; font-size: 1.1rem; }
+        .sidebar-link:hover { background-color: rgba(59, 130, 246, 0.1); color: #60a5fa; }
+        .sidebar-link.active {
+            background: #2563eb; color: white;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.25);
+        }
+        .btn-tool {
+            display: flex; align-items: center; gap: 0.5rem;
+            padding: 0.5rem 1.25rem; border-radius: 0.75rem;
+            font-size: 0.85rem; font-weight: 700; transition: all 0.2s;
+        }
+        .form-input {
+            width: 100%; px: 1.25rem; py: 0.875rem; background: white;
+            border: 1px solid #e2e8f0; border-radius: 1rem;
+            outline: none; font-weight: 600; font-size: 0.875rem; transition: all 0.2s;
+        }
+        .form-input:focus { border-color: #3b82f6; ring: 2px; ring-color: #3b82f6; }
+    </style>
+</head>
+
+<body x-data="userManager()" x-init="init()" class="bg-slate-50 text-slate-900" x-cloak>
+
+
+    <aside class="bg-[#0f172a] text-white w-64 h-screen fixed right-0 top-0 shadow-2xl z-50 flex flex-col border-l border-slate-800">
+        <div class="p-6 border-b border-slate-800 flex items-center gap-3">
+            <div class="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-900/20">
+                <i class="fas fa-layer-group text-sm"></i>
+            </div>
+            <h1 class="text-xl font-black tracking-tight">Sales<span class="text-blue-500 italic">ERP</span></h1>
+        </div>
+
+        <nav class="p-4 flex-grow overflow-y-auto">
+            <a href="dashboard.html" class="sidebar-link"><i class="fas fa-chart-line ml-3"></i><span>لوحة التحكم</span></a>
+            <a href="products.html" class="sidebar-link"><i class="fas fa-boxes-stacked ml-3"></i><span>المنتجات</span></a>
+            <a href="customers.html" class="sidebar-link"><i class="fas fa-users-viewfinder ml-3"></i><span>العملاء</span></a>
+            <a href="invoices.html" class="sidebar-link"><i class="fas fa-file-invoice-dollar ml-3"></i><span>الفواتير</span></a>
+            <a href="roles.html" class="sidebar-link"><i class="fas fa-shield-halved ml-3"></i><span>الأدوار</span></a>
+            <a href="users.html" class="sidebar-link active"><i class="fas fa-user-group ml-3"></i><span>المستخدمين</span></a>
+            <a href="permissions.html" class="sidebar-link"><i class="fas fa-key ml-3"></i><span>الصلاحيات</span></a>
+        </nav>
+
+        <div class="p-4 bg-slate-900/50 border-t border-slate-800">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-blue-600/20 border border-blue-600/30 flex items-center justify-center text-blue-400 font-bold text-xs" x-text="currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'"></div>
+                    <div class="text-right">
+                        <p class="text-[11px] font-bold text-white truncate w-24" x-text="currentUser.name"></p>
+                        <p class="text-[9px] text-slate-500 font-medium uppercase" x-text="currentUser.role_name"></p>
+                    </div>
+                </div>
+                <button @click="handleLogout" class="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-red-400 transition-colors">
+                    <i class="fas fa-power-off text-sm"></i>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main  -->
+    <main class="mr-64 p-8 min-h-screen">
+        <header class="flex justify-between items-end mb-8">
+            <div class="text-right">
+                <h2 class="text-3xl font-black text-slate-800">إدارة المستخدمين</h2>
+                <p class="text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">تنسيق القوى العاملة وتوزيع الصلاحيات</p>
+            </div>
+            
+            <div class="bg-white px-6 py-3 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 text-right">
+                <div>
+                    <p class="text-[10px] font-black text-slate-400">إجمالي الحسابات</p>
+                    <p class="text-xl font-black text-blue-600" x-text="users.length"></p>
+                </div>
+                <i class="fas fa-user-shield text-slate-100 text-3xl"></i>
+            </div>
+        </header>
+
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-6 flex flex-wrap items-center gap-3">
+            <button @click="openAddModal()" :disabled="!can('Users', 'create')" class="btn-tool bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200 disabled:opacity-30">
+                <i class="fas fa-plus-circle"></i><span>مستخدم جديد</span>
+            </button>
+            
+            <button @click="openEditModal()" :disabled="!selectedId || !can('Users', 'update')" class="btn-tool bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-30">
+                <i class="fas fa-pen-to-square text-amber-500"></i><span>تعديل</span>
+            </button>
+
+            <button @click="confirmDelete()" :disabled="!selectedId || !can('Users', 'delete')" class="btn-tool bg-white border border-slate-200 text-slate-700 hover:bg-red-50 hover:text-red-600 disabled:opacity-30">
+                <i class="fas fa-trash-can text-red-400"></i><span>حذف</span>
+            </button>
+            
+            <div class="mr-auto relative">
+                <i class="fas fa-magnifying-glass absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                <input type="text" x-model="searchQuery" placeholder="بحث بالاسم أو البريد..." class="bg-slate-50 border border-slate-200 rounded-xl pr-10 pl-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none w-72">
+            </div>
+        </div>
+
+    
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden relative">
+            <div x-show="loading.users" class="absolute inset-0 bg-white/70 backdrop-blur-[2px] z-10 flex items-center justify-center font-bold text-blue-600">
+                <i class="fas fa-circle-notch animate-spin ml-3"></i> جاري تحديث بيانات المستخدمين...
+            </div>
+
+            <table class="w-full text-right">
+                <thead>
+                    <tr class="bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-widest border-b border-slate-100">
+                        <th class="px-6 py-5 w-16 text-center">اختيار</th>
+                        <th class="px-6 py-5">المستخدم</th>
+                        <th class="px-6 py-5">بيانات الاتصال</th>
+                        <th class="px-6 py-5">الدور الوظيفي</th>
+                        <th class="px-6 py-5">الحالة</th>
+                        <th class="px-6 py-5">التاريخ</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                    <template x-for="user in filteredUsers" :key="user.id">
+                        <tr @click="selectedId = user.id" :class="selectedId === user.id ? 'bg-blue-50/60' : 'hover:bg-slate-50/50'" class="cursor-pointer transition-all">
+                            <td class="px-6 py-5 text-center">
+                                <div class="w-5 h-5 border rounded flex items-center justify-center mx-auto transition-all" :class="selectedId === user.id ? 'bg-blue-600 border-blue-600' : 'bg-white border-slate-300'">
+                                    <i x-show="selectedId === user.id" class="fas fa-check text-[8px] text-white"></i>
+                                </div>
+                            </td>
+                            <td class="px-6 py-5">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-bold" x-text="user.name.charAt(0)"></div>
+                                    <span class="font-black text-slate-800" x-text="user.name"></span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-5 text-sm font-semibold text-slate-500" x-text="user.email"></td>
+                            <td class="px-6 py-5">
+                                <span class="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-xs font-black border border-blue-100" x-text="getRoleName(user.role_id)"></span>
+                            </td>
+                            <td class="px-6 py-5">
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 text-[11px] font-black rounded-full" 
+                                      :class="user.status === 'active' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'">
+                                    <span class="w-1.5 h-1.5 rounded-full" :class="user.status === 'active' ? 'bg-emerald-500' : 'bg-rose-500'"></span>
+                                    <span x-text="user.status === 'active' ? 'نشط' : 'معطل'"></span>
+                                </span>
+                            </td>
+                            <td class="px-6 py-5 text-slate-400 text-xs font-bold" x-text="formatDate(user.created_at)"></td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Modal Form -->
+    <div x-show="modalOpen" x-cloak class="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div @click="modalOpen = false" class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
+        <div class="bg-white w-full max-w-xl rounded-[2rem] shadow-2xl relative z-10 border border-slate-200 overflow-hidden" x-transition>
+            <div class="p-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+                <h3 class="font-black text-xl text-slate-800" x-text="isEdit ? 'تعديل بيانات الحساب' : 'إضافة مستخدم جديد'"></h3>
+                <button @click="modalOpen = false" class="text-slate-400 hover:text-slate-600"><i class="fas fa-circle-xmark text-2xl"></i></button>
+            </div>
+            
+            <form @submit.prevent="saveUser" class="p-8 space-y-5">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="col-span-2">
+                        <label class="block text-[10px] font-black text-slate-400 uppercase mb-2">الاسم الكامل</label>
+                        <input type="text" x-model="form.name" required class="form-input" placeholder="مثال: أحمد محمد">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase mb-2">البريد الإلكتروني</label>
+                        <input type="email" x-model="form.email" required class="form-input" placeholder="name@company.com">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase mb-2">الحالة</label>
+                        <select x-model="form.status" class="form-input">
+                            <option value="active">نشط</option>
+                            <option value="inactive">معطل</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase mb-2">الدور الوظيفي</label>
+                        <select x-model="form.role_id" required class="form-input">
+                            <option value="" disabled>اختر الدور</option>
+                            <template x-for="role in roles" :key="role.id">
+                                <option :value="role.id" x-text="role.name"></option>
+                            </template>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase mb-2">كلمة المرور</label>
+                        <input type="password" x-model="form.password" :required="!isEdit" class="form-input" :placeholder="isEdit ? ' فارغة للحفظ' : '••••••••'">
+                    </div>
+                </div>
+
+                <div class="flex gap-3 pt-6">
+                    <button type="submit" class="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-black text-sm shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all flex items-center justify-center gap-2">
+                        <i x-show="loading.saving" class="fas fa-spinner animate-spin"></i>
+                        <span>حفظ التغييرات</span>
+                    </button>
+                    <button type="button" @click="modalOpen = false" class="px-8 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold text-sm">إلغاء</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div x-show="message.show" x-cloak class="fixed bottom-6 left-6 z-[120]" x-transition>
+        <div :class="message.type === 'success' ? 'bg-emerald-600' : 'bg-rose-600'" class="text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3">
+            <i class="fas" :class="message.type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation'"></i>
+            <span class="font-bold text-sm" x-text="message.text"></span>
+        </div>
+    </div>
+
+    <script>
+        function userManager() {
+            return {
+                currentUser: { name: '', role_name: '' },
+                users: [],
+                roles: [],
+                loading: { users: false, roles: false, saving: false },
+                searchQuery: '',
+                selectedId: null,
+                modalOpen: false, 
+                isEdit: false,
+                form: { name: '', email: '', password: '', status: 'active', role_id: '' },
+                message: { show: false, text: '', type: 'success' },
+
+                async init() {
+                    if (window.auth) {
+                        if (!auth.isAuthenticated()) { window.location.href = 'index.html'; return; }
+                        this.currentUser = auth.getUser();
+                    }
+                    await Promise.all([this.loadRoles(), this.loadUsers()]);
+                },
+
+                showNotification(text, type = 'success') {
+                    this.message = { show: true, text, type };
+                    setTimeout(() => this.message.show = false, 3000);
+                },
+
+                can(model, action) {
+                    return window.auth ? auth.can(model, action) : true;
+                },
+
+                formatDate(date) {
+                    return date ? new Date(date).toLocaleDateString('ar-SA') : '---';
+                },
+
+                getRoleName(id) {
+                    const role = this.roles.find(r => r.id === id);
+                    return role ? role.name : 'بدون دور';
+                },
+
+                async loadRoles() {
+                    try {
+                        const roles = await apiFetch('/roles/');
+                
+                        this.roles = Array.isArray(roles) ? roles.filter(r => r.status === 'active') : [];
+                    } catch (e) { this.showNotification('خطأ في تحميل الأدوار', 'error'); }
+                },
+
+                async loadUsers() {
+                    if (!this.can('Users', 'read')) return;
+                    this.loading.users = true;
+                    try {
+                        const data = await apiFetch('/users/');
+                        this.users = Array.isArray(data) ? data : [];
+                    } catch (e) { this.showNotification('خطأ في تحميل المستخدمين', 'error'); }
+                    finally { this.loading.users = false; }
+                },
+
+                get filteredUsers() {
+                    if (!this.searchQuery) return this.users;
+                    const q = this.searchQuery.toLowerCase();
+                    return this.users.filter(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q));
+                },
+
+                openAddModal() {
+                    this.isEdit = false;
+                    this.form = { name: '', email: '', password: '', status: 'active', role_id: '' };
+                    this.modalOpen = true;
+                },
+
+                openEditModal() {
+                    const user = this.users.find(u => u.id === this.selectedId);
+                    if (!user) return;
+                    this.isEdit = true;
+                    this.form = { ...user, password: '' };
+                    this.modalOpen = true;
+                },
+
+                async saveUser() {
+                    this.loading.saving = true;
+                    try {
+                        const method = this.isEdit ? 'PUT' : 'POST';
+                        const url = this.isEdit ? `/users/${this.form.id}/` : '/users/';
+                        const payload = { ...this.form };
+                        if (this.isEdit && !payload.password) delete payload.password;
+
+                        await apiFetch(url, method, payload);
+                        this.showNotification('تم الحفظ بنجاح');
+                        this.modalOpen = false;
+                        await this.loadUsers();
+                        this.selectedId = null;
+                    } catch (e) {
+                        this.showNotification('فشل الحفظ، تأكد من صحة البيانات', 'error');
+                    } finally { this.loading.saving = false; }
+                },
+
+                async confirmDelete() {
+                    if (!confirm('هل أنت متأكد من حذف هذا المستخدم نهائياً؟')) return;
+                    try {
+                        await apiFetch(`/users/${this.selectedId}/`, 'DELETE');
+                        this.showNotification('تم الحذف بنجاح');
+                        await this.loadUsers();
+                        this.selectedId = null;
+                    } catch (e) { this.showNotification('خطأ في عملية الحذف', 'error'); }
+                },
+
+                handleLogout() {
+                    if (confirm('تسجيل الخروج؟')) auth.logout();
+                }
+            };
+        }
+    </script>
+</body>
+</html>

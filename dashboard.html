@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SalesERP  - لوحة التحكم</title> 
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap');
+        body { font-family: 'Cairo', sans-serif; }
+        [x-cloak] { display: none !important; }
+        
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            padding: 0.9rem 1.25rem;
+            border-radius: 0.75rem;
+            color: #94a3b8;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+        .sidebar-link i { width: 28px; text-align: center; font-size: 1.1rem; }
+        .sidebar-link:hover {
+            background-color: rgba(59, 130, 246, 0.1);
+            color: #60a5fa;
+        }
+        .sidebar-link.active {
+            background: #2563eb;
+            color: white;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.25);
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+    </style>
+</head>
+
+<body x-data="dashboardApp()" x-init="init()" class="bg-slate-50 text-slate-900" x-cloak>
+
+
+    <aside class="bg-[#0f172a] text-white w-64 h-screen fixed right-0 top-0 shadow-2xl z-50 flex flex-col border-l border-slate-800">
+        <div class="p-6 border-b border-slate-800 flex items-center gap-3">
+            <div class="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-900/20">
+                <i class="fas fa-layer-group text-sm"></i>
+            </div>
+            <h1 class="text-xl font-black tracking-tight">Sales<span class="text-blue-500 italic">ERP</span></h1>
+        </div>
+
+        <nav class="p-4 flex-grow overflow-y-auto custom-scrollbar">
+            <a href="dashboard.html" class="sidebar-link active">
+                <i class="fas fa-chart-line ml-3"></i> <span>لوحة التحكم</span>
+            </a>
+            <a href="products.html" class="sidebar-link">
+                <i class="fas fa-boxes-stacked ml-3"></i> <span>المنتجات</span>
+            </a>
+            <a href="customers.html" class="sidebar-link">
+                <i class="fas fa-users-viewfinder ml-3"></i> <span>العملاء</span>
+            </a>
+            <a href="invoices.html" class="sidebar-link">
+                <i class="fas fa-file-invoice-dollar ml-3"></i> <span>فاتورة المبيعات</span>
+            </a>
+            <a href="roles.html" class="sidebar-link">
+                <i class="fas fa-shield-halved ml-3"></i> <span>الأدوار</span>
+            </a>
+            <a href="users.html" class="sidebar-link">
+                <i class="fas fa-user-group ml-3"></i> <span>المستخدمين</span>
+            </a>
+        </nav>
+
+        <div class="p-4 bg-slate-900/50 border-t border-slate-800">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-blue-600/20 border border-blue-600/30 flex items-center justify-center text-blue-400 font-bold text-xs" 
+                         x-text="user.name ? user.name.charAt(0).toUpperCase() : 'U'"></div>
+                    <div class="text-right">
+                        <p class="text-[11px] font-bold text-white truncate w-24" x-text="user.name || 'مستخدم'"></p>
+                        <p class="text-[9px] text-slate-500 font-medium uppercase" x-text="user.role_name || 'بدون دور'"></p>
+                    </div>
+                </div>
+                <button @click="logout()" class="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-red-400 transition-colors">
+                    <i class="fas fa-power-off text-sm"></i>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="mr-64 p-8 min-h-screen">
+        <header class="flex justify-between items-start mb-10">
+            <div>
+                <h2 class="text-3xl font-black text-slate-800 tracking-tight">لوحة التحكم</h2>
+                <div class="flex items-center gap-2 mt-2">
+                    <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                    <p class="text-slate-400 text-xs font-bold uppercase tracking-wider">النظام متصل: <span x-text="user.email"></span></p>
+                </div>
+            </div>
+            
+            <div class="bg-white p-2 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4 px-6 h-16">
+                <div class="text-right border-l border-slate-100 pl-4">
+                    <p class="text-[10px] font-black text-slate-400 uppercase"> التاريخ الحالي</p>
+                    <p class="text-sm font-bold text-slate-700" x-text="currentTime"></p>
+                </div>
+                <i class="fas fa-calendar-check text-blue-600"></i>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
+            <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden group">
+                <div class="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110"></div>
+                <p class="text-slate-400 text-xs font-bold mb-1 uppercase tracking-tighter relative z-10">إجمالي المبيعات</p>
+                <p class="text-3xl font-black text-slate-800 relative z-10" x-text="stats.total_sales"></p>
+            </div>
+            <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden group">
+                <div class="absolute top-0 right-0 w-24 h-24 bg-indigo-50 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110"></div>
+                <p class="text-slate-400 text-xs font-bold mb-1 uppercase tracking-tighter relative z-10">عدد المنتجات</p>
+                <p class="text-3xl font-black text-slate-800 relative z-10" x-text="stats.products_count"></p>
+            </div>
+            <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden group">
+                <div class="absolute top-0 right-0 w-24 h-24 bg-emerald-50 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110"></div>
+                <p class="text-slate-400 text-xs font-bold mb-1 uppercase tracking-tighter relative z-10"> عدد العملاء  </p>
+                <p class="text-3xl font-black text-slate-800 relative z-10" x-text="stats.customers_count"></p>
+            </div>
+        </div>
+
+        
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden" x-show="can('read', 'Invoices')">
+             <div class="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <h4 class="font-black text-slate-800">آخر فواتير المبيعات</h4>
+                <a href="invoices.html" class="text-xs font-bold text-blue-600 hover:underline">مشاهدة الكل</a>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-right border-collapse">
+                    <thead>
+                        <tr class="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] border-b border-slate-100">
+                            <th class="px-8 py-5">رقم الفاتورة</th>
+                            <th class="px-8 py-5">اسم العميل</th>
+                            <th class="px-8 py-5">المبلغ الإجمالي</th>
+                            <th class="px-8 py-5 text-center">حالة السداد</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">
+                        <template x-for="inv in recentInvoices" :key="inv.id">
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="px-8 py-5 text-sm font-bold text-blue-600" x-text="'#INV-' + inv.id"></td>
+                                <td class="px-8 py-5 text-sm font-bold text-slate-700" x-text="inv.customer_name || 'عميل نقدي'"></td>
+                                <td class="px-8 py-5 text-sm font-bold text-slate-900" x-text="Number(inv.total_amount).toLocaleString() + ' ر.س'"></td>
+                                <td class="px-8 py-5 text-center">
+                                    <span :class="{
+                                        'bg-blue-50 text-blue-600': inv.status === 'pending',
+                                        'bg-green-50 text-green-600': inv.status === 'paid',
+                                        'bg-red-50 text-red-600': inv.status === 'refused'
+                                    }" class="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase" x-text="inv.status"></span>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+                <div x-show="recentInvoices.length === 0" class="px-8 py-10 text-center text-slate-400 text-sm italic">
+                    لا توجد فواتير مسجلة حتى الآن.
+                </div>
+            </div>
+        </div>
+        
+        <div x-show="!can('read', 'Invoices')" class="p-20 text-center bg-slate-100 rounded-3xl border-2 border-dashed border-slate-200">
+            <i class="fas fa-lock text-4xl text-slate-300 mb-4"></i>
+            <p class="text-slate-500 font-bold">عذراً، ليس لديك صلاحية لعرض الفواتير في لوحة التحكم.</p>
+        </div>
+    </main>
+
+    <script>
+        const API_BASE_URL = 'http://127.0.0.1:9000/api';
+
+        async function parseError(response) {
+            try {
+                const data = await response.json();
+                return data.detail || (typeof data === 'object' ? Object.values(data).flat().join(', ') : "خطأ غير معروف");
+            } catch (e) { return response.statusText; }
+        }
+
+        async function apiFetch(endpoint, { method = 'GET', body = null } = {}) {
+            const url = `${API_BASE_URL}${endpoint.endsWith('/') ? endpoint : endpoint + '/'}`;
+            const token = localStorage.getItem('access_token');
+            const headers = { 
+                'Content-Type': 'application/json', 
+                'Accept': 'application/json' 
+            };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            try {
+                const response = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : null });
+                if (response.status === 401) { 
+                    localStorage.clear(); window.location.href = 'index.html'; 
+                    return null; 
+                }
+                if (!response.ok) throw { status: response.status, message: await parseError(response) };
+                
+                if (response.status === 204) return true;
+                
+                return await response.json();
+            } catch (error) { throw error; }
+        }
+
+        const auth = {
+            getUser: () => JSON.parse(localStorage.getItem('user_data') || '{}'),
+            isAuthenticated: () => !!localStorage.getItem('access_token'),
+            can: (action, model) => {
+                const user = JSON.parse(localStorage.getItem('user_data') || '{}');
+                
+                // Admin has full access
+                if (user.role_name === 'admin') return true;
+
+                const perms = user.permissions || [];
+                const p = perms.find(x => x.model_name.toLowerCase() === model.toLowerCase());
+                
+                return p ? (p[action.toLowerCase()] === true || p[action.toLowerCase()] === 1) : false;
+            },
+            logout: () => { localStorage.clear(); window.location.href = 'index.html'; }
+        };
+
+        function dashboardApp() {
+            return {
+                user: {},
+                stats: { total_sales: '0', products_count: 0, customers_count: 0 },
+                recentInvoices: [],
+                currentTime: '',
+
+                async init() {
+                    if (!auth.isAuthenticated()) {
+                        window.location.href = 'index.html';
+                        return;
+                    }
+                    this.user = auth.getUser();
+                    this.currentTime = new Date().toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                    
+                    await this.loadData();
+                },
+
+                can(action, model) {
+                    return auth.can(action, model);
+                },
+
+                async loadData() {
+                    try {
+                        if (this.can('read', 'Invoices')) {
+                            const invoices = await apiFetch('/invoices/');
+                            if (Array.isArray(invoices)) {
+                                const total = invoices.reduce((s, i) => s + Number(i.total_amount), 0);
+                                this.stats.total_sales = total.toLocaleString();
+                                this.recentInvoices = [...invoices].reverse().slice(0, 5);
+                            }
+                        } else {
+                            this.stats.total_sales = 'محجوب';
+                        }
+
+                        if (this.can('read', 'Products')) {
+                            const products = await apiFetch('/products/');
+                            this.stats.products_count = Array.isArray(products) ? products.length : 0;
+                        } else {
+                            this.stats.products_count = '-';
+                        }
+
+                        if (this.can('read', 'Customers')) {
+                            const customers = await apiFetch('/customers/');
+                            this.stats.customers_count = Array.isArray(customers) ? customers.length : 0;
+                        } else {
+                            this.stats.customers_count = '-';
+                        }
+                    } catch (e) {
+                        console.error('Data loading error:', e);
+                    }
+                },
+
+                logout() {
+                    if (confirm('هل أنت متأكد من تسجيل الخروج؟')) auth.logout();
+                }
+            }
+        }
+    </script>
+</body>
+</html>

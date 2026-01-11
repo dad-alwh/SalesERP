@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SalesERP - العملاء</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap');
+        body { font-family: 'Cairo', sans-serif; }
+        [x-cloak] { display: none !important; }
+        
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            padding: 0.9rem 1.25rem;
+            border-radius: 0.75rem;
+            color: #94a3b8;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+        .sidebar-link i { width: 28px; text-align: center; font-size: 1.1rem; }
+        .sidebar-link:hover { background-color: rgba(59, 130, 246, 0.1); color: #60a5fa; }
+        .sidebar-link.active {
+            background: #2563eb;
+            color: white;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.25);
+        }
+
+        .btn-tool {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1.25rem;
+            border-radius: 0.75rem;
+            font-size: 0.85rem;
+            font-weight: 700;
+            transition: all 0.2s;
+        }
+    </style>
+</head>
+
+<body x-data="customerManager()" x-init="init()" class="bg-slate-50 text-slate-900" x-cloak>
+
+    
+    <aside class="bg-[#0f172a] text-white w-64 h-screen fixed right-0 top-0 shadow-2xl z-50 flex flex-col border-l border-slate-800">
+        <div class="p-6 border-b border-slate-800 flex items-center gap-3">
+            <div class="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-900/20">
+                <i class="fas fa-layer-group text-sm"></i>
+            </div>
+            <h1 class="text-xl font-black tracking-tight">Sales<span class="text-blue-500 italic">ERP</span></h1>
+        </div>
+
+        <nav class="p-4 flex-grow overflow-y-auto">
+            <a href="dashboard.html" class="sidebar-link"><i class="fas fa-chart-line ml-3"></i><span>لوحة التحكم</span></a>
+            <a href="products.html" class="sidebar-link"><i class="fas fa-boxes-stacked ml-3"></i><span>المنتجات</span></a>
+            <a href="customers.html" class="sidebar-link active"><i class="fas fa-users-viewfinder ml-3"></i><span>العملاء</span></a>
+            <a href="invoices.html" class="sidebar-link"><i class="fas fa-file-invoice-dollar ml-3"></i><span>فاتورة المبيعات</span></a>
+            <a href="roles.html" class="sidebar-link"><i class="fas fa-shield-halved ml-3"></i><span>الادوار</span></a>
+            <a href="users.html" class="sidebar-link"><i class="fas fa-user-group ml-3"></i><span>المستخدمين</span></a>
+            <a href="permissions.html" class="sidebar-link"><i class="fas fa-key ml-3"></i><span>الصلاحيات</span></a>
+        </nav>
+
+        <div class="p-4 bg-slate-900/50 border-t border-slate-800">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-blue-600/20 border border-blue-600/30 flex items-center justify-center text-blue-400 font-bold text-xs" x-text="currentUser.name ? currentUser.name.charAt(0).toUpperCase() : ''"></div>
+                    <div class="text-right">
+                        <p class="text-[11px] font-bold text-white truncate w-24" x-text="currentUser.name"></p>
+                        <p class="text-[9px] text-slate-500 font-medium uppercase" x-text="currentUser.role_name"></p>
+                    </div>
+                </div>
+                <button @click="handleLogout" class="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-red-400">
+                    <i class="fas fa-power-off text-sm"></i>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <main class="mr-64 p-8 min-h-screen">
+        <header class="flex justify-between items-end mb-8 text-right">
+            <div>
+                <h2 class="text-3xl font-black text-slate-800"> بيانات العملاء</h2>
+                <p class="text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">إدارة بيانات العملاء</p>
+            </div>
+            <div class="bg-white px-6 py-3 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
+                <div class="text-right">
+                    <p class="text-[10px] font-black text-slate-400">إجمالي العملاء</p>
+                    <p class="text-xl font-black text-blue-600" x-text="customers.length"></p>
+                </div>
+                <i class="fas fa-users-viewfinder text-slate-100 text-3xl"></i>
+            </div>
+        </header>
+
+        <!-- Toolbar -->
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-6 flex flex-wrap items-center gap-3">
+            <button @click="openAddModal()" :disabled="!can('Customers', 'create')" 
+                class="btn-tool bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200 disabled:opacity-30">
+                <i class="fas fa-user-plus"></i><span> اضافة</span>
+            </button>
+            
+            <button @click="openViewModal()" :disabled="!selectedId || !can('Customers', 'read')" 
+                class="btn-tool bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-30">
+                <i class="fas fa-eye text-blue-500"></i><span>قراءة</span>
+            </button>
+            
+            <button @click="openEditModal()" :disabled="!selectedId || !can('Customers', 'update')" 
+                class="btn-tool bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-30">
+                <i class="fas fa-edit text-amber-500"></i><span>تعديل</span>
+            </button>
+
+            <button @click="confirmDelete()" :disabled="!selectedId || !can('Customers', 'delete')" 
+                class="btn-tool bg-white border border-slate-200 text-slate-700 hover:bg-red-50 hover:text-red-600 disabled:opacity-30">
+                <i class="fas fa-trash-alt text-red-400"></i><span>حذف</span>
+            </button>
+
+            <div class="h-8 w-px bg-slate-200 mx-1"></div>
+
+            <button @click="loadCustomers()" class="btn-tool bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100">
+                <i class="fas fa-sync-alt" :class="loading ? 'animate-spin' : ''"></i>
+            </button>
+
+            <div class="mr-auto relative">
+                <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                <input type="text" x-model="searchQuery" placeholder="بحث..." class="bg-slate-50 border border-slate-200 rounded-xl pr-10 pl-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none w-64">
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden relative">
+            <div x-show="loading" class="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex items-center justify-center font-bold text-blue-600">
+                <i class="fas fa-spinner animate-spin ml-2"></i> جاري التحميل...
+            </div>
+
+            <table class="w-full text-right">
+                <thead>
+                    <tr class="bg-slate-50 text-slate-400 text-[10px] font-black uppercase border-b border-slate-100">
+                        <th class="px-6 py-5 w-16 text-center">#</th>
+                        <th class="px-6 py-5">العميل</th>
+                        <th class="px-6 py-5">البريد الإلكتروني</th>
+                        <th class="px-6 py-5">رقم الهاتف</th>
+                        <th class="px-6 py-5">العنوان</th>
+                        <th class="px-6 py-5">التاريخ</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                    <template x-for="customer in filteredCustomers" :key="customer.id">
+                        <tr @click="selectedId = (selectedId === customer.id ? null : customer.id)" 
+                            :class="selectedId === customer.id ? 'bg-blue-50/50' : 'hover:bg-slate-50/40'" 
+                            class="cursor-pointer transition-all group">
+                            <td class="px-6 py-5 text-center">
+                                <div class="w-5 h-5 border rounded flex items-center justify-center mx-auto" :class="selectedId === customer.id ? 'bg-blue-600 border-blue-600' : 'bg-white border-slate-300'">
+                                    <i x-show="selectedId === customer.id" class="fas fa-check text-[8px] text-white"></i>
+                                </div>
+                            </td>
+                            <td class="px-6 py-5">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 border border-slate-200">
+                                        <i class="fas fa-user-tag text-sm"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-bold text-slate-800" x-text="customer.name"></p>
+                                        <p class="text-[10px] text-slate-400" x-text="customer.mobile || 'بدون محمول'"></p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-5 text-sm" x-text="customer.email || '-'"></td>
+                            <td class="px-6 py-5 font-bold text-sm text-blue-600" x-text="customer.phone || '-'"></td>
+                            <td class="px-6 py-5 text-slate-600 text-sm truncate max-w-xs" x-text="customer.address || '-'"></td>
+                            <td class="px-6 py-5 text-slate-400 text-[10px] font-bold" x-text="formatDate(customer.created_at)"></td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Modal Form -->
+    <div x-show="modalOpen" x-cloak class="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div @click="modalOpen = false" class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
+        <form @submit.prevent="saveCustomer" class="bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl relative z-10 border border-slate-200 overflow-hidden" x-transition>
+            <div class="p-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+                <h3 class="font-black text-xl text-slate-800" x-text="isEdit ? 'تعديل بيانات العميل' : 'إضافة عميل جديد'"></h3>
+                <button type="button" @click="modalOpen = false" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times-circle text-2xl"></i></button>
+            </div>
+            
+            <div class="p-8 space-y-5 text-right">
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-2">اسم العميل *</label>
+                    <input type="text" x-model="form.name" required class="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:border-blue-500 outline-none">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase mb-2">الهاتف الجوال *</label>
+                        <input type="text" x-model="form.mobile" required class="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:border-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase mb-2">الهاتف الثابت</label>
+                        <input type="text" x-model="form.phone" class="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:border-blue-500 outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-2">البريد الإلكتروني</label>
+                    <input type="email" x-model="form.email" class="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:border-blue-500 outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-2">العنوان</label>
+                    <textarea x-model="form.address" rows="2" class="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:border-blue-500 outline-none resize-none"></textarea>
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="submit" class="flex-1 bg-slate-900 text-white py-4 rounded-2xl font-black text-sm hover:bg-black transition-all" :disabled="loading">
+                        <i x-show="loading" class="fas fa-spinner animate-spin ml-2"></i>
+                        <span>حفظ البيانات</span>
+                    </button>
+                    <button type="button" @click="modalOpen = false" class="px-8 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold text-sm">إلغاء</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- View Modal -->
+    <div x-show="viewModalOpen" x-cloak class="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div @click="viewModalOpen = false" class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
+        <div class="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl relative z-10 border border-slate-200 overflow-hidden text-right" x-transition>
+            <div class="p-8 border-b border-blue-50 bg-blue-50/50 flex justify-between items-center">
+                <h3 class="font-black text-xl text-blue-800">بيانات العميل</h3>
+                <button @click="viewModalOpen = false" class="text-slate-400"><i class="fas fa-times-circle text-2xl"></i></button>
+            </div>
+            <div class="p-8 space-y-4" x-if="selectedCustomer">
+                <div class="flex justify-between border-b pb-2">
+                    <span class="text-slate-500">الاسم:</span>
+                    <span class="font-bold" x-text="selectedCustomer?.name"></span>
+                </div>
+                <div class="flex justify-between border-b pb-2">
+                    <span class="text-slate-500">الجوال:</span>
+                    <span class="font-bold text-green-600" x-text="selectedCustomer?.mobile"></span>
+                </div>
+                <div class="flex justify-between border-b pb-2">
+                    <span class="text-slate-500">العنوان:</span>
+                    <span class="text-slate-700" x-text="selectedCustomer?.address || 'غير مسجل'"></span>
+                </div>
+            </div>
+            <div class="p-4 bg-slate-50 border-t flex justify-center">
+                <button @click="viewModalOpen = false" class="px-6 py-3 bg-slate-200 rounded-xl font-bold">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+   
+    <div x-show="confirmation.show" x-cloak class="fixed inset-0 z-[110] flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm"></div>
+        <div class="bg-white w-full max-w-sm rounded-xl shadow-2xl relative z-10 p-6 text-center">
+            <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
+            <p class="font-bold mb-6" x-text="confirmation.text"></p>
+            <div class="flex justify-center gap-3">
+                <button @click="confirmation.action(); confirmation.show = false;" class="px-6 py-2 bg-red-600 text-white rounded-lg">تأكيد</button>
+                <button @click="confirmation.show = false" class="px-6 py-2 bg-slate-100 rounded-lg">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <div x-show="message.show" x-cloak class="fixed bottom-6 right-6 z-[120]">
+        <div :class="message.type === 'success' ? 'bg-green-600' : 'bg-red-600'" class="text-white p-4 rounded-xl shadow-lg flex items-center gap-3 w-80">
+            <i :class="message.type === 'success' ? 'fas fa-check-circle' : 'fas fa-times-circle'"></i>
+            <span class="font-medium text-sm" x-text="message.text"></span>
+        </div>
+    </div>
+
+    <script>
+        function customerManager() {
+            return {
+                currentUser: { name: '', role_name: '' },
+                customers: [],
+                loading: false,
+                searchQuery: '',
+                selectedId: null,
+                selectedCustomer: null,
+                modalOpen: false,
+                viewModalOpen: false,
+                isEdit: false,
+                form: { id: null, name: '', email: '', phone: '', mobile: '', address: '' },
+                message: { show: false, text: '', type: 'info' },
+                confirmation: { show: false, text: '', action: null },
+
+                async init() {
+                    if (window.auth) {
+                        if (!auth.isAuthenticated()) { window.location.href = 'index.html'; return; }
+                        this.currentUser = auth.getUser();
+                    }
+                    await this.loadCustomers();
+                },
+
+                showNotification(text, type = 'error') {
+                    this.message = { show: true, text: text, type: type };
+                    setTimeout(() => this.message.show = false, 3000);
+                },
+
+                can(model, action) {
+                    return window.auth ? auth.can(model, action) : true;
+                },
+
+                async loadCustomers() {
+                    this.loading = true;
+                    try {
+                        const data = await apiFetch('/customers/');
+                        this.customers = Array.isArray(data) ? data : (data.results || []);
+                    } catch (e) {
+                        this.showNotification('خطأ في الاتصال بالخادم');
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                get filteredCustomers() {
+                    const q = this.searchQuery.toLowerCase();
+                    return this.customers.filter(c => 
+                        c.name.toLowerCase().includes(q) || (c.mobile && c.mobile.includes(q))
+                    );
+                },
+
+                openAddModal() {
+                    this.isEdit = false;
+                    this.form = { id: null, name: '', email: '', phone: '', mobile: '', address: '' };
+                    this.modalOpen = true;
+                },
+
+                openEditModal() {
+                    const customer = this.customers.find(c => c.id === this.selectedId);
+                    if (customer) {
+                        this.isEdit = true;
+                        this.form = JSON.parse(JSON.stringify(customer));
+                        this.modalOpen = true;
+                    }
+                },
+
+                openViewModal() {
+                    this.selectedCustomer = this.customers.find(c => c.id === this.selectedId);
+                    if (this.selectedCustomer) this.viewModalOpen = true;
+                },
+
+                async saveCustomer() {
+                    this.loading = true;
+                    try {
+                        const method = this.isEdit ? 'PUT' : 'POST';
+                        const url = this.isEdit ? `/customers/${this.form.id}/` : '/customers/';
+                        
+                        await apiFetch(url, method, this.form);
+                        
+                        this.showNotification('تمت العملية بنجاح', 'success');
+                        this.modalOpen = false;
+                        await this.loadCustomers();
+                        this.selectedId = null;
+                    } catch (e) {
+                        console.error(e);
+                        this.showNotification('فشل الحفظ: تأكد من صحة البيانات');
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                confirmDelete() {
+                    this.confirmation = {
+                        show: true,
+                        text: 'هل أنت متأكد من حذف هذا العميل؟',
+                        action: async () => {
+                            this.loading = true;
+                            try {
+                                await apiFetch(`/customers/${this.selectedId}/`, 'DELETE');
+                                this.showNotification('تم الحذف بنجاح', 'success');
+                                await this.loadCustomers();
+                                this.selectedId = null;
+                            } catch (e) {
+                                this.showNotification('لا يمكن الحذف: العميل مرتبط ببيانات أخرى');
+                            } finally {
+                                this.loading = false;
+                            }
+                        }
+                    };
+                },
+
+                formatDate(dateStr) {
+                    return dateStr ? new Date(dateStr).toLocaleDateString('ar-SA') : '-';
+                },
+
+                handleLogout() {
+                    auth.logout();
+                }
+            }
+        }
+    </script>
+</body>
+</html>
