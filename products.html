@@ -114,22 +114,21 @@
             </div>
         </header>
 
-        
         <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-6 flex flex-wrap items-center gap-3">
         
-            <button @click="openAddModal()" :disabled="!can('Products', 'create')" class="btn-tool bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200 disabled:opacity-30 disabled:cursor-not-allowed">
+            <button @click="openAddModal()" :disabled="!can('Product', 'create')" class="btn-tool bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200 disabled:opacity-30 disabled:cursor-not-allowed">
                 <i class="fas fa-plus-circle"></i><span>منتج جديد</span>
             </button>
             
-            <button @click="openViewModal()" :disabled="!selectedId || !can('Products', 'read')" class="btn-tool bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-30">
+            <button @click="openViewModal()" :disabled="!selectedId || !can('Product', 'read')" class="btn-tool bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-30">
                 <i class="fas fa-eye text-blue-500"></i><span>قراءة</span>
             </button>
             
-            <button @click="openEditModal()" :disabled="!selectedId || !can('Products', 'update')" class="btn-tool bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-30">
+            <button @click="openEditModal()" :disabled="!selectedId || !can('Product', 'update')" class="btn-tool bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-30">
                 <i class="fas fa-edit text-amber-500"></i><span>تعديل المنتج</span>
             </button>
 
-            <button @click="confirmDelete()" :disabled="!selectedId || !can('Products', 'delete')" class="btn-tool bg-white border border-slate-200 text-slate-700 hover:bg-red-50 hover:text-red-600 disabled:opacity-30">
+            <button @click="confirmDelete()" :disabled="!selectedId || !can('Product', 'delete')" class="btn-tool bg-white border border-slate-200 text-slate-700 hover:bg-red-50 hover:text-red-600 disabled:opacity-30">
                 <i class="fas fa-trash-alt text-red-400"></i><span>حذف</span>
             </button>
 
@@ -228,12 +227,12 @@
                         <label class="block text-[10px] font-black text-slate-500 uppercase mb-2">سعر البيع *</label>
                         <div class="relative">
                             <span class="absolute left-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-300">ر.س</span>
-                            <input type="number" step="0.01" x-model="form.price" required class="w-full pl-12 pr-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:border-blue-500 outline-none font-bold text-sm">
+                            <input type="number" step="0.01" x-model.number="form.price" required class="w-full pl-12 pr-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:border-blue-500 outline-none font-bold text-sm">
                         </div>
                     </div>
                     <div>
                         <label class="block text-[10px] font-black text-slate-500 uppercase mb-2">الكمية *</label>
-                        <input type="number" x-model="form.quantity" required class="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:border-blue-500 outline-none font-bold text-sm">
+                        <input type="number" x-model.number="form.quantity" required class="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:border-blue-500 outline-none font-bold text-sm">
                     </div>
                 </div>
 
@@ -352,9 +351,10 @@
                 },
 
                 can(model, action) {
-                
-                    if (this.currentUser.role_name === 'Admin') return true;
-                    return window.auth ? auth.can(model, action) : false;
+                    const role = (this.currentUser.role_name || '').toLowerCase();
+                    if (role === 'admin') return true;
+                    
+                    return window.auth ? auth.can(action, model) : false;
                 },
 
                 async loadProducts() {
@@ -410,20 +410,31 @@
                     
                     try {
                         const method = this.isEdit ? 'PUT' : 'POST';
-                       
+                        
                         const url = this.isEdit ? `/products/${this.form.id}/` : '/products/';
                         
-                        const response = await apiFetch(url, method, this.form);
+                        const payload = {
+                            ...this.form,
+                            price: Number(this.form.price),
+                            quantity: Number(this.form.quantity)
+                        };
+
+                        const response = await apiFetch(url, {
+                            method: method, 
+                            body: payload
+                        });
                         
                         if (response) {
                             this.modalOpen = false;
-                            this.showNotification('تم حفظ العملية بنجاح', 'success');
+                            this.showNotification(this.isEdit ? 'تم التعديل بنجاح' : 'تمت الإضافة بنجاح', 'success');
                             this.selectedId = null; 
                             await this.loadProducts();
                         }
                     } catch (e) {
                         console.error("Save error:", e);
-                        this.showNotification('خطأ أثناء الحفظ. تأكد من صلاحيات الخادم.');
+                        let msg = 'خطأ أثناء الحفظ.';
+                        if (e.message) msg = e.message;
+                        this.showNotification(msg);
                     } finally {
                         this.loading = false;
                     }
@@ -433,7 +444,7 @@
                     this.showConfirmation('هل أنت متأكد من حذف هذا المنتج نهائياً؟', async () => {
                         this.loading = true;
                         try {
-                            await apiFetch(`/products/${this.selectedId}/`, 'DELETE');
+                            await apiFetch(`/products/${this.selectedId}/`, { method: 'DELETE' });
                             this.showNotification('تم الحذف بنجاح', 'success');
                             this.selectedId = null;
                             await this.loadProducts();
