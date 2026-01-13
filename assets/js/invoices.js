@@ -1,13 +1,12 @@
-
 function invoiceManager() {
     return {
-        
+        // Data Models
         invoices: [],
         customers: [],
         products: [],
         currentUser: { name: '', role_name: '' },
         
-       
+        // UI States
         loading: {
             invoices: false,
             saving: false
@@ -24,28 +23,25 @@ function invoiceManager() {
             invoice_date: new Date().toISOString().split('T')[0],
             total_amount: 0,
             status: 'pending',
-            invoice_products: []
+            invoice_products: [] // UI uses this structure
         },
-
+        
         message: { show: false, text: '', type: 'info' },
         confirmation: { show: false, text: '', action: null },
 
         async init() {
-            this.currentUser = typeof auth !== 'undefined' ? auth.getUser() : { name: 'david', role_name: 'بدون صلاحية' };
-            
+            this.currentUser = typeof auth !== 'undefined' ? auth.getUser() : { name: 'Guest', role_name: '' };
             await this.fetchInitialData();
         },
 
         async fetchInitialData() {
             this.loading.invoices = true;
             try {
-        
                 const [invoicesData, customersData, productsData] = await Promise.all([
                     apiFetch('invoices'),
                     apiFetch('customers'),
                     apiFetch('products')
                 ]);
-
                 this.invoices = invoicesData || [];
                 this.customers = customersData || [];
                 this.products = productsData || [];
@@ -150,6 +146,9 @@ function invoiceManager() {
             const inv = JSON.parse(JSON.stringify(this.selectedInvoice));
             this.isEdit = true;
             this.form = inv;
+            if (inv.items) {
+                this.form.invoice_products = inv.items;
+            }
             this.modalOpen = true;
         },
 
@@ -158,23 +157,36 @@ function invoiceManager() {
             this.viewModalOpen = true;
         },
 
-        
         async saveInvoice() {
             this.loading.saving = true;
             try {
                 const method = this.isEdit ? 'PUT' : 'POST';
                 const endpoint = this.isEdit ? `invoices/${this.form.id}` : 'invoices';
                 
-                const response = await apiFetch(endpoint, method, this.form);
+                const payload = {
+                    ...this.form,
+                    items: this.form.invoice_products.map(p => ({
+                        product_id: p.product_id,
+                        quantity: Number(p.quantity)
+                    }))
+                };
+                delete payload.invoice_products;
+
+                const response = await apiFetch(endpoint, {
+                    method: method,
+                    body: payload
+                });
                 
                 if (response) {
                     this.showToast(this.isEdit ? 'تم تحديث الفاتورة بنجاح' : 'تم إنشاء الفاتورة بنجاح', 'success');
-                    await this.fetchInitialData();
                     this.modalOpen = false;
                     this.selectedId = response.id || this.selectedId;
+                    await this.fetchInitialData();
                 }
             } catch (error) {
-                this.showToast('خطأ أثناء حفظ الفاتورة', 'error');
+                console.error(error);
+                const errorMsg = error.message || 'خطأ أثناء حفظ الفاتورة';
+                this.showToast(errorMsg, 'error');
             } finally {
                 this.loading.saving = false;
             }
@@ -191,7 +203,7 @@ function invoiceManager() {
 
         async deleteInvoice() {
             try {
-                await apiFetch(`invoices/${this.selectedId}`, 'DELETE');
+                await apiFetch(`invoices/${this.selectedId}`, { method: 'DELETE' });
                 this.showToast('تم حذف الفاتورة بنجاح', 'success');
                 this.invoices = this.invoices.filter(i => i.id !== this.selectedId);
                 this.selectedId = null;
@@ -203,12 +215,15 @@ function invoiceManager() {
         async changeStatus(newStatus) {
             if (!this.selectedId) return;
             try {
-                await apiFetch(`invoices/${this.selectedId}/status`, 'PATCH', { status: newStatus });
+                await apiFetch(`invoices/${this.selectedId}`, { 
+                    method: 'PATCH',
+                    body: { status: newStatus }
+                });
                 this.showToast(`تم تغيير حالة الفاتورة إلى: ${this.translateStatus(newStatus)}`, 'info');
                 const inv = this.invoices.find(i => i.id === this.selectedId);
                 if (inv) inv.status = newStatus;
             } catch (error) {
-                this.showToast('فشل في تغيير الحالة', 'error');
+                this.showToast('فشل في تغيير الحالة: قد لا تملك الصلاحية', 'error');
             }
         },
 
@@ -224,7 +239,7 @@ function invoiceManager() {
 
         can(model, action) {
             if (typeof auth === 'undefined') return true; 
-            return auth.can(model, action);
+            return auth.can(action, model);
         }
     };
 }
