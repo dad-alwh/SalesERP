@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SalesERP  - إدارة الأدوار</title>
+    <title>SalesERP - إدارة الأدوار</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     
-    <!-- Core Scripts -->
     <script src="assets/js/api.js"></script>
     <script src="assets/js/auth.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
@@ -97,7 +96,6 @@
             <a href="invoices.html" class="sidebar-link"><i class="fas fa-file-invoice-dollar ml-3"></i><span>فاتورة المبيعات</span></a>
             <a href="roles.html" class="sidebar-link active"><i class="fas fa-shield-halved ml-3"></i><span>الادوار</span></a>
             <a href="users.html" class="sidebar-link"><i class="fas fa-user-group ml-3"></i><span>المستخدمين</span></a>
-            <a href="permissions.html" class="sidebar-link"><i class="fas fa-key ml-3"></i><span>الصلاحيات</span></a>
         </nav>
 
         <div class="p-4 bg-slate-900/50 border-t border-slate-800">
@@ -206,8 +204,8 @@
                             </td>
                             <td class="px-6 py-5">
                                 <span class="px-3 py-1 text-xs font-bold rounded-full" 
-                                      :class="{'bg-green-100 text-green-700': role.status === 'active', 'bg-red-100 text-red-700': role.status === 'inactive'}"
-                                      x-text="role.status === 'active' ? 'مفعل' : 'غير مفعل'"></span>
+                                      :class="{'bg-green-100 text-green-700': role.status, 'bg-red-100 text-red-700': !role.status}"
+                                      x-text="role.status ? 'مفعل' : 'غير مفعل'"></span>
                             </td>
                             <td class="px-6 py-5 text-slate-400 text-sm font-bold">
                                 <span x-text="formatDate(role.created_at)"></span>
@@ -291,7 +289,6 @@
             
             <form @submit.prevent="saveRole" class="flex-grow overflow-y-auto p-8 space-y-6">
                 
-                <!-- Section 1: Role Details -->
                 <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label class="block text-[10px] font-black text-slate-500 uppercase mb-2 mr-1">اسم الدور *</label>
@@ -300,13 +297,12 @@
                     <div>
                         <label class="block text-[10px] font-black text-slate-500 uppercase mb-2 mr-1">الحالة *</label>
                         <select x-model="form.status" required class="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:border-blue-500 outline-none font-bold text-sm transition-all">
-                            <option value="active">مفعل</option>
-                            <option value="inactive">غير مفعل</option>
+                            <option :value="true">مفعل</option>
+                            <option :value="false">غير مفعل</option>
                         </select>
                     </div>
                 </div>
 
-                <!-- Section 2: Permissions Configuration -->
                 <div class="bg-white p-6 rounded-2xl border border-slate-200">
                     <h4 class="text-sm font-black text-slate-800 mb-4">تحديد الصلاحيات (Permissions)</h4>
                     
@@ -355,7 +351,6 @@
         </div>
     </div>
     
-    <!-- Confirmation Modal -->
     <div x-show="confirmation.show" x-cloak class="fixed inset-0 z-[110] flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm"></div>
         <div class="bg-white w-full max-w-sm rounded-xl shadow-2xl relative z-10 p-6 text-center" x-transition>
@@ -368,7 +363,6 @@
         </div>
     </div>
 
-    <!-- Toast Notification -->
     <div x-show="message.show" x-cloak x-transition.duration.300ms class="fixed bottom-6 right-6 z-[120]">
         <div :class="{
             'bg-green-600': message.type === 'success',
@@ -388,8 +382,7 @@
         function roleManager() {
             return {
                 roles: [],
-               
-                availableModels: ['User', 'Role', 'Permission', 'Customer', 'Product', 'Invoice'],
+                availableModels: ['User', 'Role', 'Permission', 'Customer', 'Product', 'Invoice', 'InvoiceProduct'],
                 currentUser: { name: '', role_name: '' },
                 viewPermissions: [], 
                 
@@ -406,7 +399,7 @@
                 form: {
                     id: null,
                     name: '',
-                    status: 'active',
+                    status: true,
                     permissions: [] 
                 },
 
@@ -424,19 +417,17 @@
                     
                     await this.loadRoles();
 
-                   
                     this.$watch('selectedId', async (value) => {
                         if (value) await this.fetchViewPermissions(value);
                         else this.viewPermissions = [];
                     });
                 },
 
-                // ---------------- API Calls ----------------
                 async loadRoles() {
                     this.loading.roles = true;
                     try {
                         const data = await apiFetch('/roles/');
-                        this.roles = Array.isArray(data) ? data : [];
+                        this.roles = Array.isArray(data) ? data : (data.results || []);
                     } catch (error) {
                         this.showToast('حدث خطأ أثناء تحميل الأدوار', 'error');
                         this.roles = [];
@@ -445,13 +436,16 @@
                     }
                 },
 
-               
                 async fetchViewPermissions(roleId) {
                     this.loading.permissions = true;
                     try {
+                        const role = this.roles.find(r => r.id === roleId);
+                        if (role && role.permissions) {
+                            this.viewPermissions = role.permissions;
+                        } else {
                         
-                        const data = await apiFetch('/permissions/', { params: { role_id: roleId } });
-                        this.viewPermissions = Array.isArray(data) ? data : [];
+                            this.viewPermissions = [];
+                        }
                     } catch (error) {
                         console.error('Error fetching permissions:', error);
                         this.viewPermissions = [];
@@ -466,18 +460,14 @@
 
                     try {
                         const method = this.isEdit ? 'PUT' : 'POST';
-                        
-                        const endpoint = this.isEdit ? `/roles/${this.form.id}/` : '/roles/';
-                        
+                        const endpoint = this.isEdit ? `roles/${this.form.id}` : 'roles';
                         
                         const payload = {
                             name: this.form.name,
-                            status: this.form.status,
-                            parent_role_id: null, 
+                            status: this.form.status, 
                             permissions: this.form.permissions 
                         };
 
-                        
                         const response = await apiFetch(endpoint, {
                             method: method,
                             body: payload
@@ -492,7 +482,7 @@
                     } catch (error) {
                         console.error(error);
                         let msg = 'حدث خطأ أثناء الحفظ';
-                        if (error.message) msg = error.message;
+                        if (error.message) msg = typeof error.message === 'object' ? JSON.stringify(error.message) : error.message;
                         this.showToast(msg, 'error');
                     } finally {
                         this.loading.saving = false;
@@ -502,9 +492,7 @@
                 async deleteRole() {
                     if (!this.selectedId) return;
                     try {
-                        
-                        await apiFetch(`/roles/${this.selectedId}/`, { method: 'DELETE' });
-                        
+                        await apiFetch(`roles/${this.selectedId}`, 'DELETE');
                         this.showToast('تم حذف الدور بنجاح', 'success');
                         this.selectedId = null;
                         await this.loadRoles();
@@ -513,7 +501,6 @@
                     }
                 },
 
-            
                 getEmptyPermissions() {
                     return this.availableModels.map(model => ({
                         model_name: model,
@@ -529,8 +516,7 @@
                     this.form = {
                         id: null,
                         name: '',
-                        status: 'active',
-                        
+                        status: true,
                         permissions: this.getEmptyPermissions()
                     };
                     this.modalOpen = true;
@@ -538,47 +524,36 @@
 
                 async openEditModal() {
                     if (!this.selectedId) return;
-                    this.loading.saving = true; 
                     
-                    try {
-                        
-                        const role = this.roles.find(r => r.id === this.selectedId);
-                        if (!role) throw new Error("Role not found locally");
+                    const role = this.roles.find(r => r.id === this.selectedId);
+                    if (!role) return;
 
-                        
-                        const currentPerms = await apiFetch('/permissions/', { params: { role_id: this.selectedId } });
-                        
-                        this.isEdit = true;
-                        
-                      
-                        const mergedPermissions = this.availableModels.map(model => {
-                            
-                            const existing = Array.isArray(currentPerms) ? currentPerms.find(p => p.model_name === model) : null;
-                            
-                            if (existing) {
-                                
-                                return { ...existing }; 
-                            } else {
-                                
-                                return { model_name: model, create: false, read: false, update: false, delete: false };
-                            }
-                        });
+                    this.isEdit = true;
+                    
+                    const currentPerms = role.permissions || [];
+                    
+                    const mergedPermissions = this.availableModels.map(model => {
+                        const existing = currentPerms.find(p => p.model_name === model);
+                        if (existing) {
+                            return { 
+                                model_name: model,
+                                create: existing.create,
+                                read: existing.read,
+                                update: existing.update,
+                                delete: existing.delete
+                            }; 
+                        } else {
+                            return { model_name: model, create: false, read: false, update: false, delete: false };
+                        }
+                    });
 
-                        this.form = {
-                            id: role.id,
-                            name: role.name,
-                            status: role.status,
-                            permissions: mergedPermissions
-                        };
-                        
-                        this.modalOpen = true;
-
-                    } catch (error) {
-                        console.error(error);
-                        this.showToast('فشل في تحميل تفاصيل الدور', 'error');
-                    } finally {
-                        this.loading.saving = false;
-                    }
+                    this.form = {
+                        id: role.id,
+                        name: role.name,
+                        status: role.status,
+                        permissions: mergedPermissions
+                    };
+                    this.modalOpen = true;
                 },
 
                 confirmDelete() {
@@ -592,12 +567,11 @@
 
                     this.confirmation = {
                         show: true,
-                        text: `هل أنت متأكد من حذف الدور "${role.name}"؟ سيؤثر هذا على المستخدمين المرتبطين به.`,
+                        text: `هل أنت متأكد من حذف الدور "${role.name}"؟`,
                         action: () => this.deleteRole()
                     };
                 },
 
-                // ---------------- Helpers ----------------
                 get filteredRoles() {
                     if (!this.searchQuery) return this.roles;
                     const q = this.searchQuery.toLowerCase();
@@ -607,7 +581,7 @@
                 getParentRoleName(parentId) {
                     if (!parentId) return 'لا يوجد (جذر)';
                     const parent = this.roles.find(r => r.id === parentId);
-                    return parent ? parent.name : 'دور غير معروف';
+                    return parent ? parent.name : 'غير معروف';
                 },
 
                 getSelectedRoleName() {
@@ -625,7 +599,6 @@
                 },
 
                 can(model, action) {
-                    
                     if (this.currentUser.role_name === 'admin') return true;
                     return window.auth ? auth.can(action, model) : false;
                 },
