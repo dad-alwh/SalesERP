@@ -9,6 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     
+    <!-- Core Scripts -->
     <script src="assets/js/api.js"></script>
     <script src="assets/js/auth.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
@@ -38,26 +39,25 @@
             box-shadow: 0 4px 15px rgba(37, 99, 235, 0.25);
         }
 
+        /* Buttons & Inputs */
         .btn-tool {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1.25rem;
-            border-radius: 0.75rem;
-            font-size: 0.85rem;
-            font-weight: 700;
-            transition: all 0.2s;
+            display: flex; align-items: center; gap: 0.5rem;
+            padding: 0.5rem 1.25rem; border-radius: 0.75rem;
+            font-size: 0.85rem; font-weight: 700; transition: all 0.2s;
         }
+        
+        /* Custom Checkbox for Permissions */
         .perm-checkbox {
             appearance: none;
-            width: 1.25rem;
-            height: 1.25rem;
-            border-radius: 0.35rem;
+            width: 1.4rem; /* Slightly larger for better UX */
+            height: 1.4rem;
+            border-radius: 0.4rem;
             border: 2px solid #cbd5e1;
             transition: all 0.2s;
             cursor: pointer;
-            display: inline-block;
-            vertical-align: middle;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
         .perm-checkbox:checked {
             background-color: #2563eb;
@@ -68,12 +68,13 @@
             content: "\f00c"; 
             font-family: "Font Awesome 6 Free";
             font-weight: 900;
-            font-size: 0.75rem;
+            font-size: 0.85rem;
             color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
+        }
+        .perm-checkbox:disabled {
+            background-color: #f1f5f9;
+            border-color: #e2e8f0;
+            cursor: not-allowed;
         }
     </style>
 </head>
@@ -183,7 +184,7 @@
                     <tr class="bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-widest border-b border-slate-100">
                         <th class="px-6 py-5 w-16 text-center">#</th>
                         <th class="px-6 py-5 text-right">اسم الدور</th>
-                        <th class="px-6 py-5">الدور الأب (Parent)</th>
+                        <th class="px-6 py-5">المدير المباشر (Parent)</th>
                         <th class="px-6 py-5">الحالة</th>
                         <th class="px-6 py-5">تاريخ الإنشاء</th>
                     </tr>
@@ -200,7 +201,10 @@
                             </td>
                             <td class="px-6 py-5 font-black text-slate-800" x-text="role.name"></td>
                             <td class="px-6 py-5">
-                                <span class="text-sm font-bold text-slate-500" x-text="getParentRoleName(role.parent_role_id)"></span>
+                                <div class="flex items-center gap-2">
+                                    <i class="fas fa-level-up-alt text-slate-300 flip-horizontal"></i>
+                                    <span class="text-sm font-bold text-slate-500" x-text="getParentRoleName(role.parent_role)"></span>
+                                </div>
                             </td>
                             <td class="px-6 py-5">
                                 <span class="px-3 py-1 text-xs font-bold rounded-full" 
@@ -301,10 +305,25 @@
                             <option :value="false">غير مفعل</option>
                         </select>
                     </div>
+                    
+                    <!-- Parent Role Info (Read Only) -->
+                    <div class="col-span-1 md:col-span-2 bg-blue-50/50 p-4 rounded-xl border border-blue-100 flex items-start gap-3">
+                        <i class="fas fa-info-circle text-blue-500 mt-1"></i>
+                        <div>
+                            <p class="text-xs font-bold text-blue-800">معلومة النظام:</p>
+                            <p class="text-[11px] text-blue-600/80">
+                                سيتم تعيين هذا الدور تلقائياً كتابع لـ <span class="font-black text-blue-800" x-text="currentUser.role_name"></span>.
+                                <span class="block mt-1 opacity-70">(هذه السياسة مطبقة لضمان التسلسل الهرمي للصلاحيات)</span>
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="bg-white p-6 rounded-2xl border border-slate-200">
-                    <h4 class="text-sm font-black text-slate-800 mb-4">تحديد الصلاحيات (Permissions)</h4>
+                    <h4 class="text-sm font-black text-slate-800 mb-4 flex justify-between items-center">
+                        <span>تحديد الصلاحيات (Permissions)</span>
+                        <span class="text-[10px] text-slate-400 font-normal">تأكد من اختيار الصلاحيات المناسبة لهذا المستوى الوظيفي</span>
+                    </h4>
                     
                     <div class="overflow-x-auto">
                         <table class="w-full text-right text-sm">
@@ -351,6 +370,7 @@
         </div>
     </div>
     
+    <!-- Confirmation Modal -->
     <div x-show="confirmation.show" x-cloak class="fixed inset-0 z-[110] flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm"></div>
         <div class="bg-white w-full max-w-sm rounded-xl shadow-2xl relative z-10 p-6 text-center" x-transition>
@@ -363,6 +383,7 @@
         </div>
     </div>
 
+    <!-- Toast Messages -->
     <div x-show="message.show" x-cloak x-transition.duration.300ms class="fixed bottom-6 right-6 z-[120]">
         <div :class="{
             'bg-green-600': message.type === 'success',
@@ -407,6 +428,7 @@
                 confirmation: { show: false, text: '', action: null },
 
                 async init() {
+                    // Auth Check
                     if (window.auth) {
                         if (!auth.isAuthenticated()) {
                             window.location.href = 'index.html';
@@ -429,7 +451,7 @@
                         const data = await apiFetch('/roles/');
                         this.roles = Array.isArray(data) ? data : (data.results || []);
                     } catch (error) {
-                        this.showToast('حدث خطأ أثناء تحميل الأدوار', 'error');
+                        this.showToast('حدث خطأ أثناء تحميل الأدوار. تأكد من تشغيل السيرفر.', 'error');
                         this.roles = [];
                     } finally {
                         this.loading.roles = false;
@@ -443,7 +465,6 @@
                         if (role && role.permissions) {
                             this.viewPermissions = role.permissions;
                         } else {
-                        
                             this.viewPermissions = [];
                         }
                     } catch (error) {
@@ -460,7 +481,7 @@
 
                     try {
                         const method = this.isEdit ? 'PUT' : 'POST';
-                        const endpoint = this.isEdit ? `roles/${this.form.id}` : 'roles';
+                        const endpoint = this.isEdit ? `roles/${this.form.id}/` : 'roles/';
                         
                         const payload = {
                             name: this.form.name,
@@ -492,12 +513,12 @@
                 async deleteRole() {
                     if (!this.selectedId) return;
                     try {
-                        await apiFetch(`roles/${this.selectedId}`, 'DELETE');
+                        await apiFetch(`roles/${this.selectedId}/`, { method: 'DELETE' });
                         this.showToast('تم حذف الدور بنجاح', 'success');
                         this.selectedId = null;
                         await this.loadRoles();
                     } catch (error) {
-                        this.showToast('لا يمكن حذف هذا الدور (قد يكون مرتبطاً بمستخدمين)', 'error');
+                        this.showToast('لا يمكن حذف هذا الدور (قد يكون مرتبطاً بمستخدمين أو أدوار فرعية)', 'error');
                     }
                 },
 
@@ -533,10 +554,10 @@
                     const currentPerms = role.permissions || [];
                     
                     const mergedPermissions = this.availableModels.map(model => {
-                        const existing = currentPerms.find(p => p.model_name === model);
+                        const existing = currentPerms.find(p => p.model_name.toLowerCase() === model.toLowerCase());
                         if (existing) {
                             return { 
-                                model_name: model,
+                                model_name: model, 
                                 create: existing.create,
                                 read: existing.read,
                                 update: existing.update,
@@ -580,6 +601,10 @@
 
                 getParentRoleName(parentId) {
                     if (!parentId) return 'لا يوجد (جذر)';
+                    
+            
+                    if (typeof parentId === 'object' && parentId.name) return parentId.name;
+                    
                     const parent = this.roles.find(r => r.id === parentId);
                     return parent ? parent.name : 'غير معروف';
                 },
@@ -599,7 +624,7 @@
                 },
 
                 can(model, action) {
-                    if (this.currentUser.role_name === 'admin') return true;
+                    if (this.currentUser.role_name && this.currentUser.role_name.toLowerCase() === 'admin') return true;
                     return window.auth ? auth.can(action, model) : false;
                 },
                 
