@@ -5,16 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SalesERP - إدارة المستخدمين</title>
     
-    <!-- Tailwind CSS -->
+    <!-- Tailwind CSS & Google Fonts -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
     
+    <!-- Scripts -->
     <script src="assets/js/api.js"></script>
     <script src="assets/js/auth.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
     
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap');
         body { font-family: 'Cairo', sans-serif; }
         [x-cloak] { display: none !important; }
         
@@ -34,12 +35,16 @@
             padding: 0.5rem 1.25rem; border-radius: 0.75rem;
             font-size: 0.85rem; font-weight: 700; transition: all 0.2s;
         }
+        .btn-tool:disabled { cursor: not-allowed; filter: grayscale(1); opacity: 0.5; }
+        
         .form-input {
             width: 100%; padding: 0.875rem 1.25rem; background: white;
             border: 1px solid #e2e8f0; border-radius: 1rem;
             outline: none; font-weight: 600; font-size: 0.875rem; transition: all 0.2s;
         }
         .form-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+        
+        .table-row-selected { background-color: rgba(59, 130, 246, 0.08) !important; border-right: 4px solid #2563eb; }
     </style>
 </head>
 
@@ -67,10 +72,11 @@
         <div class="p-4 bg-slate-900/50 border-t border-slate-800">
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-lg bg-blue-600/20 border border-blue-600/30 flex items-center justify-center text-blue-400 font-bold text-xs" x-text="currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'"></div>
+                    <div class="w-8 h-8 rounded-lg bg-blue-600/20 border border-blue-600/30 flex items-center justify-center text-blue-400 font-bold text-xs" 
+                         x-text="currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'"></div>
                     <div class="text-right">
-                        <p class="text-[11px] font-bold text-white truncate w-24" x-text="currentUser.name"></p>
-                        <p class="text-[9px] text-slate-500 font-medium uppercase" x-text="currentUser.role_name"></p>
+                        <p class="text-[11px] font-bold text-white truncate w-24" x-text="currentUser.name || 'مستخدم'"></p>
+                        <p class="text-[9px] text-slate-500 font-medium uppercase" x-text="currentUser.role_name || 'زائر'"></p>
                     </div>
                 </div>
                 <button @click="handleLogout" class="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-red-400 transition-colors">
@@ -90,24 +96,31 @@
             
             <div class="bg-white px-6 py-3 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 text-right">
                 <div>
-                    <p class="text-[10px] font-black text-slate-400">إجمالي الحسابات</p>
+                    <p class="text-[10px] font-black text-slate-400 uppercase">إجمالي الحسابات</p>
                     <p class="text-xl font-black text-blue-600" x-text="users.length"></p>
                 </div>
                 <i class="fas fa-user-shield text-slate-100 text-3xl"></i>
             </div>
         </header>
 
-        <!-- Tools Bar -->
+       
         <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-6 flex flex-wrap items-center gap-3">
-            <button @click="openAddModal()" :disabled="!can('Users', 'create')" class="btn-tool bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200 disabled:opacity-30">
+           
+            <button @click="openAddModal()" 
+                    :disabled="!can('User', 'create')" 
+                    class="btn-tool bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200">
                 <i class="fas fa-plus-circle"></i><span>مستخدم جديد</span>
             </button>
             
-            <button @click="openEditModal()" :disabled="!selectedId || !can('Users', 'update')" class="btn-tool bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-30">
+            <button @click="openEditModal()" 
+                    :disabled="!selectedId || !can('User', 'update')" 
+                    class="btn-tool bg-white border border-slate-200 text-slate-700 hover:bg-slate-50">
                 <i class="fas fa-pen-to-square text-amber-500"></i><span>تعديل</span>
             </button>
 
-            <button @click="confirmDelete()" :disabled="!selectedId || !can('Users', 'delete')" class="btn-tool bg-white border border-slate-200 text-slate-700 hover:bg-red-50 hover:text-red-600 disabled:opacity-30">
+            <button @click="confirmDelete()" 
+                    :disabled="!selectedId || !can('User', 'delete')" 
+                    class="btn-tool bg-white border border-slate-200 text-slate-700 hover:bg-red-50 hover:text-red-600">
                 <i class="fas fa-trash-can text-red-400"></i><span>حذف</span>
             </button>
             
@@ -117,70 +130,102 @@
             </div>
         </div>
 
-        <!-- Table -->
+        <!-- Table Container -->
         <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden relative">
             <div x-show="loading.users" class="absolute inset-0 bg-white/70 backdrop-blur-[2px] z-10 flex items-center justify-center font-bold text-blue-600">
-                <i class="fas fa-circle-notch animate-spin ml-3"></i> جاري تحديث بيانات المستخدمين...
+                <i class="fas fa-circle-notch animate-spin ml-3"></i> جاري التحميل...
             </div>
 
-            <table class="w-full text-right">
-                <thead>
-                    <tr class="bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-widest border-b border-slate-100">
-                        <th class="px-6 py-5 w-16 text-center">اختيار</th>
-                        <th class="px-6 py-5">المستخدم</th>
-                        <th class="px-6 py-5">بيانات الاتصال</th>
-                        <th class="px-6 py-5">الدور الوظيفي</th>
-                        <th class="px-6 py-5">الحالة</th>
-                        <th class="px-6 py-5">التاريخ</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-50">
-                    <template x-for="user in filteredUsers" :key="user.id">
-                        <tr @click="selectedId = user.id" :class="selectedId === user.id ? 'bg-blue-50/60' : 'hover:bg-slate-50/50'" class="cursor-pointer transition-all">
-                            <td class="px-6 py-5 text-center">
-                                <div class="w-5 h-5 border rounded flex items-center justify-center mx-auto transition-all" :class="selectedId === user.id ? 'bg-blue-600 border-blue-600' : 'bg-white border-slate-300'">
-                                    <i x-show="selectedId === user.id" class="fas fa-check text-[8px] text-white"></i>
-                                </div>
-                            </td>
-                            <td class="px-6 py-5">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-bold" x-text="user.name.charAt(0)"></div>
-                                    <span class="font-black text-slate-800" x-text="user.name"></span>
-                                </div>
-                            </td>
-                            <td class="px-6 py-5 text-sm font-semibold text-slate-500" x-text="user.email"></td>
-                            <td class="px-6 py-5">
-                                <span class="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-xs font-black border border-blue-100" x-text="getRoleName(user.role_id)"></span>
-                            </td>
-                            <td class="px-6 py-5">
-                                <span class="inline-flex items-center gap-1.5 px-3 py-1 text-[11px] font-black rounded-full" 
-                                      :class="user.status === 'active' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'">
-                                    <span class="w-1.5 h-1.5 rounded-full" :class="user.status === 'active' ? 'bg-emerald-500' : 'bg-rose-500'"></span>
-                                    <span x-text="user.status === 'active' ? 'نشط' : 'معطل'"></span>
-                                </span>
-                            </td>
-                            <td class="px-6 py-5 text-slate-400 text-xs font-bold" x-text="formatDate(user.created_at)"></td>
+            <div class="overflow-x-auto">
+                <table class="w-full text-right border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-widest border-b border-slate-100">
+                            <th class="px-6 py-5 w-16 text-center">اختيار</th>
+                            <th class="px-6 py-5">المستخدم</th>
+                            <th class="px-6 py-5">بيانات الاتصال</th>
+                            <th class="px-6 py-5">الدور الوظيفي</th>
+                            <th class="px-6 py-5">الحالة</th>
+                            <th class="px-6 py-5">تاريخ الإضافة</th>
                         </tr>
-                    </template>
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">
+                        <template x-for="user in filteredUsers" :key="user.id">
+                            <tr @click="toggleSelection(user.id)" 
+                                :class="selectedId === user.id ? 'table-row-selected' : 'hover:bg-slate-50/50'" 
+                                class="cursor-pointer transition-all">
+                                <td class="px-6 py-5 text-center">
+                                    <div class="w-5 h-5 border rounded flex items-center justify-center mx-auto transition-all" 
+                                         :class="selectedId === user.id ? 'bg-blue-600 border-blue-600' : 'bg-white border-slate-300'">
+                                        <i x-show="selectedId === user.id" class="fas fa-check text-[8px] text-white"></i>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-5">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-bold border border-blue-100" 
+                                             x-text="user.name ? user.name.charAt(0) : 'U'"></div>
+                                        <span class="font-black text-slate-800" x-text="user.name"></span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-5 text-sm font-semibold text-slate-500" x-text="user.email"></td>
+                                <td class="px-6 py-5">
+                                    <span class="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-black border border-slate-200" 
+                                          x-text="getRoleName(user.role)"></span>
+                                </td>
+                                <td class="px-6 py-5">
+                                   
+                                    <span class="inline-flex items-center gap-1.5 px-3 py-1 text-[11px] font-black rounded-full" 
+                                          :class="user.status ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'">
+                                        <span class="w-1.5 h-1.5 rounded-full" :class="user.status ? 'bg-emerald-500' : 'bg-rose-500'"></span>
+                                        <span x-text="user.status ? 'نشط' : 'معطل'"></span>
+                                    </span>
+                                </td>
+                                <td class="px-6 py-5 text-slate-400 text-xs font-bold" x-text="formatDate(user.created_at)"></td>
+                            </tr>
+                        </template>
+                        <!-- Empty State -->
+                        <template x-if="filteredUsers.length === 0 && !loading.users">
+                            <tr>
+                                <td colspan="6" class="py-20 text-center text-slate-400 font-bold">
+                                    <i class="fas fa-user-slash block text-4xl mb-4 opacity-20"></i>
+                                    لا يوجد مستخدمين لعرضهم
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </main>
 
     <!-- Modal Form -->
-    <div x-show="modalOpen" x-cloak class="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div x-show="modalOpen" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        
         <div @click="modalOpen = false" class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
-        <div class="bg-white w-full max-w-xl rounded-[2rem] shadow-2xl relative z-10 border border-slate-200 overflow-hidden" x-transition>
+        
+        <div class="bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl relative z-10 border border-slate-200 overflow-hidden" 
+             x-transition:enter="transition ease-out duration-300 transform"
+             x-transition:enter-start="scale-95 opacity-0"
+             x-transition:enter-end="scale-100 opacity-100">
+            
             <div class="p-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
                 <h3 class="font-black text-xl text-slate-800" x-text="isEdit ? 'تعديل بيانات الحساب' : 'إضافة مستخدم جديد'"></h3>
-                <button @click="modalOpen = false" class="text-slate-400 hover:text-slate-600"><i class="fas fa-circle-xmark text-2xl"></i></button>
+                <button @click="modalOpen = false" class="text-slate-400 hover:text-slate-600 transition-colors">
+                    <i class="fas fa-circle-xmark text-2xl"></i>
+                </button>
             </div>
             
             <form @submit.prevent="saveUser" class="p-8 space-y-5">
                 <div class="grid grid-cols-2 gap-4">
                     <div class="col-span-2">
                         <label class="block text-[10px] font-black text-slate-400 uppercase mb-2">الاسم الكامل</label>
-                        <input type="text" x-model="form.name" required class="form-input" placeholder="مثال: أحمد محمد">
+                        <input type="text" x-model="form.name" required class="form-input" placeholder="أدخل اسم المستخدم">
                     </div>
                     <div>
                         <label class="block text-[10px] font-black text-slate-400 uppercase mb-2">البريد الإلكتروني</label>
@@ -188,15 +233,15 @@
                     </div>
                     <div>
                         <label class="block text-[10px] font-black text-slate-400 uppercase mb-2">الحالة</label>
-                        <select x-model="form.status" class="form-input">
-                            <option value="active">نشط</option>
-                            <option value="inactive">معطل</option>
+                        <select x-model="form.status" class="form-input cursor-pointer">
+                            <option value="true">نشط</option>
+                            <option value="false">معطل</option>
                         </select>
                     </div>
                     <div>
                         <label class="block text-[10px] font-black text-slate-400 uppercase mb-2">الدور الوظيفي</label>
-                        <select x-model="form.role_id" required class="form-input">
-                            <option value="" disabled>اختر الدور</option>
+                        <select x-model="form.role" required class="form-input cursor-pointer">
+                            <option value="" disabled selected>اختر الدور</option>
                             <template x-for="role in roles" :key="role.id">
                                 <option :value="role.id" x-text="role.name"></option>
                             </template>
@@ -204,16 +249,18 @@
                     </div>
                     <div>
                         <label class="block text-[10px] font-black text-slate-400 uppercase mb-2">كلمة المرور</label>
-                        <input type="password" x-model="form.password" :required="!isEdit" class="form-input" :placeholder="isEdit ? ' فارغة للحفظ' : '••••••••'">
+                        <input type="password" x-model="form.password" :required="!isEdit" class="form-input" 
+                               :placeholder="isEdit ? 'اتركها فارغة للحفظ' : '••••••••'">
                     </div>
                 </div>
 
                 <div class="flex gap-3 pt-6">
-                    <button type="submit" :disabled="loading.saving" class="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-black text-sm shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                    <button type="submit" :disabled="loading.saving" 
+                            class="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-black text-sm shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all flex items-center justify-center gap-2">
                         <i x-show="loading.saving" class="fas fa-spinner animate-spin"></i>
-                        <span x-text="loading.saving ? 'جاري الحفظ...' : 'حفظ التغييرات'"></span>
+                        <span x-text="loading.saving ? 'جاري الحفظ...' : (isEdit ? 'تحديث البيانات' : 'إنشاء الحساب')"></span>
                     </button>
-                    <button type="button" @click="modalOpen = false" class="px-8 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold text-sm">إلغاء</button>
+                    <button type="button" @click="modalOpen = false" class="px-8 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold text-sm hover:bg-slate-200 transition-all">إلغاء</button>
                 </div>
             </form>
         </div>
@@ -221,29 +268,36 @@
 
     <!-- Confirmation Modal -->
     <div x-show="confirmation.show" x-cloak class="fixed inset-0 z-[150] flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
-        <div class="bg-white max-w-sm w-full rounded-[2rem] p-8 relative z-10 text-center shadow-2xl border border-slate-100" x-transition>
+        <div @click="confirmation.show = false" class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
+        <div class="bg-white max-w-sm w-full rounded-[2.5rem] p-8 relative z-10 text-center shadow-2xl border border-slate-100" 
+             x-transition:enter="transition ease-out duration-300 transform"
+             x-transition:enter-start="scale-90 opacity-0"
+             x-transition:enter-end="scale-100 opacity-100">
             <div class="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-6">
                 <i class="fas fa-trash-can text-3xl"></i>
             </div>
-            <h3 class="text-xl font-black text-slate-800 mb-2">تأكيد الحذف</h3>
+            <h3 class="text-xl font-black text-slate-800 mb-2">تأكيد الإجراء</h3>
             <p class="text-slate-500 text-sm font-semibold mb-8 leading-relaxed" x-text="confirmation.text"></p>
             <div class="flex gap-3">
-                <button @click="confirmation.action(); confirmation.show = false" class="flex-1 bg-rose-600 text-white py-4 rounded-2xl font-black text-sm shadow-lg shadow-rose-100 hover:bg-rose-700 transition-all">نعم، حذف</button>
+                <button @click="confirmation.action(); confirmation.show = false" class="flex-1 bg-rose-600 text-white py-4 rounded-2xl font-black text-sm shadow-lg shadow-rose-100 hover:bg-rose-700 transition-all">نعم، استمر</button>
                 <button @click="confirmation.show = false" class="flex-1 bg-slate-100 text-slate-600 py-4 rounded-2xl font-black text-sm hover:bg-slate-200 transition-all">تراجع</button>
             </div>
         </div>
     </div>
 
     <!-- Notification Toast -->
-    <div x-show="message.show" x-cloak class="fixed bottom-6 left-6 z-[200]" x-transition>
+    <div x-show="message.show" x-cloak class="fixed bottom-6 left-6 z-[200]" 
+         x-transition:enter="transition ease-out duration-300 transform"
+         x-transition:enter-start="translate-y-10 opacity-0"
+         x-transition:enter-end="translate-y-0 opacity-100"
+         x-transition:leave="transition ease-in duration-200 opacity-0">
         <div :class="message.type === 'success' ? 'bg-emerald-600 shadow-emerald-100' : 'bg-rose-600 shadow-rose-100'" 
-             class="text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 min-w-[300px]">
-            <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                <i class="fas" :class="message.type === 'success' ? 'fa-check text-sm' : 'fa-exclamation-triangle text-sm'"></i>
+             class="text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 min-w-[320px]">
+            <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                <i class="fas" :class="message.type === 'success' ? 'fa-check' : 'fa-triangle-exclamation'"></i>
             </div>
             <div>
-                <p class="font-black text-[13px]" x-text="message.text"></p>
+                <p class="font-black text-[14px]" x-text="message.text"></p>
             </div>
         </div>
     </div>
@@ -259,16 +313,23 @@
                 selectedId: null,
                 modalOpen: false, 
                 isEdit: false,
-                form: { id: null, name: '', email: '', password: '', status: 'active', role_id: '' },
+               
+                form: { id: null, name: '', email: '', password: '', status: 'true', role: '' },
                 message: { show: false, text: '', type: 'success' },
                 confirmation: { show: false, text: '', action: null },
 
                 async init() {
+                 
                     if (window.auth) {
-                        if (!auth.isAuthenticated()) { window.location.href = 'index.html'; return; }
+                        if (!auth.isAuthenticated()) { 
+                            window.location.href = 'index.html'; 
+                            return; 
+                        }
                         this.currentUser = auth.getUser();
                     }
-                    await Promise.all([this.loadRoles(), this.loadUsers()]);
+                    
+                    await this.loadRoles();
+                    await this.loadUsers();
                 },
 
                 showNotification(text, type = 'success') {
@@ -277,35 +338,48 @@
                 },
 
                 can(model, action) {
-                    return window.auth ? auth.can(model, action) : true;
+                    if (window.auth) return auth.can(action, model); 
+                    return true; 
                 },
 
                 formatDate(date) {
-                    return date ? new Date(date).toLocaleDateString('ar-SA') : '---';
+                    if (!date) return '---';
+                    try {
+                        return new Date(date).toLocaleDateString('ar-SA', {
+                            year: 'numeric', month: 'short', day: 'numeric'
+                        });
+                    } catch(e) { return date; }
                 },
 
                 getRoleName(id) {
                     const role = this.roles.find(r => r.id === id);
-                    return role ? role.name : 'بدون دور';
+                    return role ? role.name : 'غير محدد';
+                },
+
+                toggleSelection(id) {
+                    this.selectedId = (this.selectedId === id) ? null : id;
                 },
 
                 async loadRoles() {
+                    this.loading.roles = true;
                     try {
-                        const roles = await apiFetch('/roles/');
-                        this.roles = Array.isArray(roles) ? roles.filter(r => r.status === 'active') : [];
+                        const roles = await apiFetch('roles'); 
+                        this.roles = Array.isArray(roles) ? roles.filter(r => r.status === true) : [];
                     } catch (e) { 
-                        this.showNotification('خطأ في تحميل الأدوار الوظيفية', 'error'); 
-                    }
+                        console.error('Roles Load Error:', e);
+                        this.showNotification('تعذر تحميل قائمة الأدوار الوظيفية', 'error'); 
+                    } finally { this.loading.roles = false; }
                 },
 
                 async loadUsers() {
-                    if (!this.can('Users', 'read')) return;
+                    if (!this.can('User', 'read')) return;
                     this.loading.users = true;
                     try {
-                        const data = await apiFetch('/users/');
+                        const data = await apiFetch('users');
                         this.users = Array.isArray(data) ? data : [];
                     } catch (e) { 
-                        this.showNotification('خطأ في تحميل قائمة المستخدمين', 'error'); 
+                        console.error('Users Load Error:', e);
+                        this.showNotification('خطأ في الاتصال بالخادم لتحميل المستخدمين', 'error'); 
                     } finally { this.loading.users = false; }
                 },
 
@@ -320,7 +394,8 @@
 
                 openAddModal() {
                     this.isEdit = false;
-                    this.form = { id: null, name: '', email: '', password: '', status: 'active', role_id: '' };
+                    // status يجب أن تكون نص يمثل القيمة البوليانية للقائمة المنسدلة
+                    this.form = { id: null, name: '', email: '', password: '', status: 'true', role: '' };
                     this.modalOpen = true;
                 },
 
@@ -328,7 +403,14 @@
                     const user = this.users.find(u => u.id === this.selectedId);
                     if (!user) return;
                     this.isEdit = true;
-                    this.form = { ...user, password: '' };
+                    this.form = { 
+                        id: user.id, 
+                        name: user.name, 
+                        email: user.email, 
+                        status: user.status ? 'true' : 'false', 
+                        role: user.role, 
+                        password: '' 
+                    };
                     this.modalOpen = true;
                 },
 
@@ -336,20 +418,29 @@
                     this.loading.saving = true;
                     try {
                         const method = this.isEdit ? 'PUT' : 'POST';
-                        const url = this.isEdit ? `/users/${this.form.id}/` : '/users/';
-                        const payload = { ...this.form };
+                        const url = this.isEdit ? `users/${this.form.id}` : 'users';
                         
+                        let payload = { 
+                            ...this.form,
+                            status: this.form.status === 'true'
+                        };
                         
                         if (this.isEdit && !payload.password) delete payload.password;
                         if (!this.isEdit) delete payload.id;
 
-                        await apiFetch(url, method, payload);
-                        this.showNotification(this.isEdit ? 'تم تحديث بيانات المستخدم بنجاح' : 'تم إضافة المستخدم بنجاح');
+                        await apiFetch(url, { method: method, body: payload });
+                        
+                        this.showNotification(
+                            this.isEdit ? 'تم تحديث بيانات المستخدم بنجاح' : 'تم إضافة المستخدم الجديد بنجاح', 
+                            'success'
+                        );
+                        
                         this.modalOpen = false;
-                        await this.loadUsers();
                         this.selectedId = null;
+                        await this.loadUsers(); 
                     } catch (e) {
-                        this.showNotification(e.message || 'فشل حفظ البيانات: تحقق من المدخلات', 'error');
+                        const errorMsg = typeof e.message === 'object' ? JSON.stringify(e.message) : e.message;
+                        this.showNotification(errorMsg || 'فشل تنفيذ العملية', 'error');
                     } finally { this.loading.saving = false; }
                 },
 
@@ -359,15 +450,15 @@
 
                     this.confirmation = {
                         show: true,
-                        text: `هل أنت متأكد من حذف حساب المستخدم "${user.name}"؟ لا يمكن التراجع عن هذه العملية.`,
+                        text: `هل أنت متأكد من رغبتك في حذف حساب "${user.name}" نهائياً؟`,
                         action: async () => {
                             try {
-                                await apiFetch(`/users/${this.selectedId}/`, 'DELETE');
-                                this.showNotification('تم حذف المستخدم بنجاح');
+                                await apiFetch(`users/${this.selectedId}`, { method: 'DELETE' });
+                                this.showNotification('تم حذف الحساب بنجاح');
                                 await this.loadUsers();
                                 this.selectedId = null;
                             } catch (e) { 
-                                this.showNotification('خطأ: لا يمكن حذف المستخدم لوجود ارتباطات بالنظام', 'error'); 
+                                this.showNotification('عذراً، لا يمكن حذف هذا المستخدم', 'error'); 
                             }
                         }
                     };
@@ -376,8 +467,11 @@
                 handleLogout() {
                     this.confirmation = {
                         show: true,
-                        text: 'هل أنت متأكد من رغبتك في تسجيل الخروج؟',
-                        action: () => auth.logout()
+                        text: 'هل أنت متأكد من رغبتك في إنهاء الجلسة الحالية؟',
+                        action: () => {
+                            if (window.auth) auth.logout();
+                            else window.location.href = 'index.html';
+                        }
                     };
                 }
             };
